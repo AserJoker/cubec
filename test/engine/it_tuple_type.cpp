@@ -906,14 +906,17 @@ TEST_F(it_tuple_type, non_tuple_extends_wildcard_tuple_fails) {
 
 /* ---- Empty tuple rejected ---- */
 
-TEST_F(it_tuple_type, vm_create_tuple_type_value_0_fields_returns_exception) {
+TEST_F(it_tuple_type, vm_create_tuple_type_value_0_fields_is_unit) {
   vm_t vm = vm_create(allocator);
   allocator_t alloc = vm_get_allocator(vm);
   vec_init_t vi = {.auto_dispose = false};
   vec_t types = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
   value_t tv = vm_create_tuple_type_value(vm, types, true);
   allocator_free(alloc, &types);
-  EXPECT_EQ(type_get_kind(value_get_type(tv)), TYPE_KIND_EXCEPTION);
+  /* empty tuple (unit type) is now valid for pack params that absorb 0 args */
+  EXPECT_EQ(type_get_kind(value_get_type(tv)), TYPE_KIND_TYPE);
+  tuple_type_t tt = (tuple_type_t)value_get_data(tv);
+  EXPECT_EQ(tuple_type_get_field_count(tt), (uint64_t)0);
   vm_dispose(vm, allocator);
 }
 

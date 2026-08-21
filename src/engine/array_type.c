@@ -24,6 +24,7 @@ static value_t _array_safe_cast(vm_t vm, value_t self, type_t to);
 static value_t _array_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _array_to_string(vm_t vm, value_t self);
 static value_t _array_get_item(vm_t vm, value_t self, value_t index);
+static vec_t   _array_spread(vm_t vm, value_t self);
 static value_t _array_set_item(vm_t vm, value_t self, value_t index, value_t val);
 static value_t _array_slice(vm_t vm, value_t self, uint64_t start, uint64_t count);
 
@@ -81,6 +82,7 @@ static vtable_t _make_array_vtable(void) {
       .get_prop     = NULL,
       .set_prop     = NULL,
       .type_clone   = _array_type_clone,
+      .spread       = _array_spread,
   };
 }
 
@@ -182,6 +184,22 @@ static value_t _make_elem_value(vm_t vm, array_type_t at, value_t array,
   scope_t scope = vm_get_current_scope(vm);
   if (scope) vec_push(scope->values, v);
   return v;
+}
+
+/* ---- VTable: spread ---- */
+
+static vec_t _array_spread(vm_t vm, value_t self) {
+  array_type_t at = (array_type_t)value_get_type(self);
+  if (value_is_shadow(self))
+    return NULL; /* shadow arrays cannot spread runtime elements */
+  allocator_t allocator = vm_get_allocator(vm);
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t result = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  for (uint64_t i = 0; i < at->count; i++) {
+    value_t elem = _make_elem_value(vm, at, self, i);
+    vec_push(result, elem);
+  }
+  return result;
 }
 
 /* ---- VTable: clone ---- */

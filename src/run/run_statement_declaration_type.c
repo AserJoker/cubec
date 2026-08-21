@@ -128,7 +128,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
         }
 
         generic_param_t gp = generic_param_create(allocator, pname, param_type,
-                                                    extends);
+                                                    extends, false);
         allocator_free(allocator, &extends);
         vec_push(params_vec, gp);
       }
@@ -275,7 +275,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
       }
 
       generic_param_t gp = generic_param_create(allocator, pname, param_type,
-                                                  extends);
+                                                  extends, false);
       allocator_free(allocator, &extends);
       vec_push(params_vec, gp);
     }

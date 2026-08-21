@@ -128,37 +128,6 @@ static void _generic_fn_type_dispose(void *self, allocator_t allocator) {
   gt->node = NULL;
 }
 
-static void _generic_fn_type_clone(void *self, allocator_t allocator, void *another) {
-  generic_fn_type_t dst = (generic_fn_type_t)self;
-  generic_fn_type_t src = (generic_fn_type_t)another;
-
-  dst->base.kind   = src->base.kind;
-  dst->base.name   = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
-  dst->base.size   = src->base.size;
-  dst->base.align  = src->base.align;
-  dst->base.mut    = src->base.mut;
-  dst->base.vtable = src->base.vtable;
-
-  /* clone params */
-  vec_init_t vi = {.auto_dispose = true};
-  dst->params = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
-  size_t n = vec_get_size(src->params);
-  for (size_t i = 0; i < n; i++) {
-    generic_param_t p = (generic_param_t)vec_get(src->params, i);
-    generic_param_t cloned = (generic_param_t)alloc_clone(allocator, p);
-    vec_push(dst->params, cloned);
-  }
-
-  /* instances: start empty (cache is not cloned) */
-  dst->instances = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
-
-  /* clone isolated scope */
-  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
-
-  /* node: borrowed, shallow copy */
-  dst->node = src->node;
-}
-
 class_t g_generic_fn_type_class = {
     .size    = sizeof(struct _generic_fn_type_t),
     .name    = "cubec.engine.generic_fn_type",
@@ -174,37 +143,86 @@ static value_t _generic_fn_instantiate(vm_t vm, value_t self, size_t argc, value
   type_t self_type = value_get_type(self);
   generic_fn_type_t gt = (generic_fn_type_t)self_type;
 
-  /* 1. argc must match param count */
+  /* 1. Validate argc against param count, accounting for pack params.
+   * A pack param (is_rest=true) absorbs all remaining arguments, so:
+   * - argc must be >= number of non-rest params
+   * - only the last param can be a pack param */
   vec_t param_defs = generic_fn_type_get_params(gt);
   size_t param_count = vec_get_size(param_defs);
-  if (argc != param_count)
-    return create_exception_value(vm, "generic fn '%s' expects %zu params, got %zu",
-                                  type_get_name(self_type), param_count, argc);
+  size_t non_rest_count = 0;
+  bool has_rest = false;
+  for (size_t i = 0; i < param_count; i++) {
+    generic_param_t gp = (generic_param_t)vec_get(param_defs, i);
+    if (generic_param_is_rest(gp)) {
+      has_rest = true;
+    } else {
+      non_rest_count++;
+    }
+  }
+  if (has_rest) {
+    if (argc < non_rest_count)
+      return create_exception_value(vm,
+          "generic fn '%s' expects at least %zu params, got %zu",
+          type_get_name(self_type), non_rest_count, argc);
+  } else {
+    if (argc != param_count)
+      return create_exception_value(vm,
+          "generic fn '%s' expects %zu params, got %zu",
+          type_get_name(self_type), param_count, argc);
+  }
 
   /* 2. extends constraint validation.
-   * argv[i] is a type value (TYPE_KIND_TYPE) wrapping the concrete type.
-   * constraint is a type_t stored in the generic_param's extends vec.
-   * Temporarily wrap the constraint as a type value and use value_extends
-   * for uniform dispatch (handles wildcard, interface, cross-kind, etc.). */
+   * For non-rest params, validate argv[i] against constraints as before.
+   * For the rest param, validate each absorbed argument against constraints. */
   allocator_t allocator = vm_get_allocator(vm);
   type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
+  size_t argv_idx = 0;
   for (size_t i = 0; i < param_count; i++) {
     generic_param_t gp = (generic_param_t)vec_get(param_defs, i);
     vec_t ext = generic_param_get_extends(gp);
-    value_t arg = argv[i];
     size_t ext_count = vec_get_size(ext);
-    for (size_t j = 0; j < ext_count; j++) {
-      type_t constraint = (type_t)vec_get(ext, j);
-      /* create a temporary type value wrapping the constraint type */
-      value_t constraint_val = value_create(allocator, type_type, constraint, false);
-      value_t ext_result = value_extends(vm, arg, constraint_val);
-      /* free the temporary type value (not registered in any scope) */
-      allocator_free(allocator, &constraint_val);
-      if (value_is_abnormal(ext_result)) return ext_result;
-      bool ok = *(bool *)value_get_data(ext_result);
-      if (!ok)
-        return create_exception_value(vm, "generic param '%s' constraint not satisfied",
-                                      generic_param_get_name(gp));
+    if (ext_count == 0) {
+      /* no constraints — just advance argv index */
+      if (generic_param_is_rest(gp)) {
+        /* rest param absorbs remaining args */
+        argv_idx = argc;
+      } else {
+        argv_idx++;
+      }
+      continue;
+    }
+    if (generic_param_is_rest(gp)) {
+      /* rest param: validate each absorbed argument */
+      for (size_t k = argv_idx; k < argc; k++) {
+        for (size_t j = 0; j < ext_count; j++) {
+          type_t constraint = (type_t)vec_get(ext, j);
+          value_t constraint_val = value_create(allocator, type_type, constraint, false);
+          value_t ext_result = value_extends(vm, argv[k], constraint_val);
+          allocator_free(allocator, &constraint_val);
+          if (value_is_abnormal(ext_result)) return ext_result;
+          bool ok = *(bool *)value_get_data(ext_result);
+          if (!ok)
+            return create_exception_value(vm,
+                "generic param '%s' constraint not satisfied for argument %zu",
+                generic_param_get_name(gp), k);
+        }
+      }
+      argv_idx = argc;
+    } else {
+      /* normal param: validate single argument */
+      for (size_t j = 0; j < ext_count; j++) {
+        type_t constraint = (type_t)vec_get(ext, j);
+        value_t constraint_val = value_create(allocator, type_type, constraint, false);
+        value_t ext_result = value_extends(vm, argv[argv_idx], constraint_val);
+        allocator_free(allocator, &constraint_val);
+        if (value_is_abnormal(ext_result)) return ext_result;
+        bool ok = *(bool *)value_get_data(ext_result);
+        if (!ok)
+          return create_exception_value(vm,
+              "generic param '%s' constraint not satisfied",
+              generic_param_get_name(gp));
+      }
+      argv_idx++;
     }
   }
 

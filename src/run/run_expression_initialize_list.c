@@ -8,6 +8,7 @@
 #include "engine/tuple_type.h"
 #include "engine/array_type.h"
 #include "cubec/expression_initialize_list.h"
+#include "cubec/expression_spread.h"
 #include "cubec/initialize_field.h"
 #include "cubec/literal_identifier.h"
 #include "core/string.h"
@@ -27,6 +28,60 @@ static const char *_field_name(node_t item) {
 
 static value_t _eval_positional(vm_t vm, node_t item, bool shadow) {
   return run_expression(vm, item, shadow);
+}
+
+/* ---- spread expansion helper ---- */
+
+/**
+ * @brief Evaluate positional items, expanding spread nodes.
+ *
+ * For spread nodes (CUBEC_NODE_EXPRESSION_SPREAD), evaluates the inner
+ * expression, calls value_spread(), and pushes each expanded element as
+ * an individual positional value.
+ *
+ * @param vm       The VM
+ * @param items    AST items vec (may contain spread nodes)
+ * @param shadow   Shadow mode flag
+ * @param[out] out_values  Vec to push evaluated value_t into
+ * @param[out] out_types   Vec to push value_get_type(v) for each value (may be NULL)
+ * @return NULL on success, exception value on failure
+ */
+static value_t _eval_positional_items_with_spread(vm_t vm, vec_t items,
+                                                   bool shadow,
+                                                   vec_t out_values,
+                                                   vec_t out_types) {
+  size_t count = vec_get_size(items);
+  for (size_t i = 0; i < count; i++) {
+    node_t item = (node_t)vec_get(items, i);
+
+    if (item->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
+      cubec_expression_spread_t spread = (cubec_expression_spread_t)item;
+      value_t inner = run_expression(vm, spread->value, shadow);
+      if (value_is_abnormal(inner))
+        return inner;
+      vec_t expanded = value_spread(vm, inner);
+      if (!expanded)
+        return create_exception_value(vm,
+            "cannot spread value of type '%s' in initialize list",
+            type_get_name(value_get_type(inner)));
+      size_t exp_count = vec_get_size(expanded);
+      for (size_t j = 0; j < exp_count; j++) {
+        value_t elem = (value_t)vec_get(expanded, j);
+        vec_push(out_values, elem);
+        if (out_types)
+          vec_push(out_types, value_get_type(elem));
+      }
+      allocator_free(vm_get_allocator(vm), &expanded);
+    } else {
+      value_t v = _eval_positional(vm, item, shadow);
+      if (value_is_abnormal(v))
+        return v;
+      vec_push(out_values, v);
+      if (out_types)
+        vec_push(out_types, value_get_type(v));
+    }
+  }
+  return NULL;
 }
 
 /* ---- typed struct: reorder by declaration order, safe_cast each field ---- */
@@ -99,31 +154,45 @@ static value_t _build_typed_struct(vm_t vm, value_t type_val,
 static value_t _build_typed_tuple(vm_t vm, tuple_type_t tt,
                                   cubec_expression_initialize_list_t node,
                                   bool shadow) {
-  size_t count = tuple_type_get_field_count(tt);
-  size_t item_count = vec_get_size(node->items);
-  if (item_count != count)
+  uint64_t tuple_fc = tuple_type_get_field_count(tt);
+  allocator_t alloc = vm_get_allocator(vm);
+
+  /* expand spread nodes to get actual element count */
+  vec_init_t vvi = {.auto_dispose = false};
+  vec_t value_vec = (vec_t)allocator_create(alloc, &g_vec_class, &vvi);
+
+  value_t err = _eval_positional_items_with_spread(vm, node->items, shadow,
+                                                    value_vec, NULL);
+  if (err) {
+    allocator_free(alloc, &value_vec);
+    return err;
+  }
+
+  size_t count = vec_get_size(value_vec);
+  if (count != tuple_fc) {
+    allocator_free(alloc, &value_vec);
     return create_exception_value(vm,
                                   "initialize_list: tuple expects %zu elements, got %zu",
-                                  count, item_count);
+                                  (size_t)tuple_fc, count);
+  }
 
-  if (shadow)
+  if (shadow) {
+    allocator_free(alloc, &value_vec);
     return create_tuple_shadow(vm, tt, true);
+  }
 
-  allocator_t alloc = vm_get_allocator(vm);
   value_t *elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
-  if (!elems)
+  if (!elems) {
+    allocator_free(alloc, &value_vec);
     return create_exception_value(vm, "initialize_list: out of memory");
+  }
 
   for (size_t i = 0; i < count; i++) {
-    node_t item = (node_t)vec_get(node->items, i);
-    value_t v = _eval_positional(vm, item, false);
-    if (value_is_abnormal(v)) {
-      allocator_free(alloc, &elems);
-      return v;
-    }
+    value_t v = (value_t)vec_get(value_vec, i);
     value_t cast = value_safe_cast(vm, v, tuple_type_get_element_type(tt, (uint64_t)i));
     if (value_is_abnormal(cast)) {
       allocator_free(alloc, &elems);
+      allocator_free(alloc, &value_vec);
       return cast;
     }
     elems[i] = cast;
@@ -131,6 +200,7 @@ static value_t _build_typed_tuple(vm_t vm, tuple_type_t tt,
 
   value_t result = create_tuple_value(vm, tt, elems);
   allocator_free(alloc, &elems);
+  allocator_free(alloc, &value_vec);
   return result;
 }
 
@@ -139,32 +209,46 @@ static value_t _build_typed_tuple(vm_t vm, tuple_type_t tt,
 static value_t _build_typed_array(vm_t vm, array_type_t at,
                                   cubec_expression_initialize_list_t node,
                                   bool shadow) {
-  uint64_t count = array_type_get_count(at);
-  size_t item_count = vec_get_size(node->items);
-  if (item_count != count)
+  uint64_t array_count = array_type_get_count(at);
+  allocator_t alloc = vm_get_allocator(vm);
+
+  /* expand spread nodes to get actual element count */
+  vec_init_t vvi = {.auto_dispose = false};
+  vec_t value_vec = (vec_t)allocator_create(alloc, &g_vec_class, &vvi);
+
+  value_t err = _eval_positional_items_with_spread(vm, node->items, shadow,
+                                                    value_vec, NULL);
+  if (err) {
+    allocator_free(alloc, &value_vec);
+    return err;
+  }
+
+  size_t count = vec_get_size(value_vec);
+  if (count != array_count) {
+    allocator_free(alloc, &value_vec);
     return create_exception_value(vm,
                                   "initialize_list: array expects %zu elements, got %zu",
-                                  (size_t)count, item_count);
+                                  (size_t)array_count, count);
+  }
 
-  if (shadow)
+  if (shadow) {
+    allocator_free(alloc, &value_vec);
     return create_array_shadow(vm, at, true);
-
-  allocator_t alloc = vm_get_allocator(vm);
-  value_t *elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
-  if (!elems)
-    return create_exception_value(vm, "initialize_list: out of memory");
+  }
 
   type_t elem_type = array_type_get_element_type(at);
+  value_t *elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
+  if (!elems) {
+    allocator_free(alloc, &value_vec);
+    return create_exception_value(vm, "initialize_list: out of memory");
+  }
+
   for (size_t i = 0; i < count; i++) {
-    node_t item = (node_t)vec_get(node->items, i);
-    value_t v = _eval_positional(vm, item, false);
-    if (value_is_abnormal(v)) {
-      allocator_free(alloc, &elems);
-      return v;
-    }
+    value_t v = (value_t)vec_get(value_vec, i);
     value_t cast = value_safe_cast(vm, v, elem_type);
     if (value_is_abnormal(cast)) {
       allocator_free(alloc, &elems);
+      allocator_free(alloc, &value_vec);
       return cast;
     }
     elems[i] = cast;
@@ -172,6 +256,7 @@ static value_t _build_typed_array(vm_t vm, array_type_t at,
 
   value_t result = create_array_value(vm, at, elems);
   allocator_free(alloc, &elems);
+  allocator_free(alloc, &value_vec);
   return result;
 }
 
@@ -243,45 +328,55 @@ static value_t _build_anon_struct(vm_t vm,
 static value_t _build_anon_tuple(vm_t vm,
                                  cubec_expression_initialize_list_t node,
                                  bool shadow) {
-  size_t count = vec_get_size(node->items);
-  /* empty list handled by caller as empty struct */
-
   allocator_t alloc = vm_get_allocator(vm);
-  vec_t elem_types = (vec_t)allocator_create(alloc, &g_vec_class,
-                                             &(vec_init_t){.auto_dispose = false});
-  value_t *elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
-  if (!elems) {
-    allocator_free(alloc, &elem_types);
-    return create_exception_value(vm, "initialize_list: out of memory");
+
+  /* expand spread nodes to collect values and their types */
+  vec_init_t vvi = {.auto_dispose = false};
+  vec_t value_vec = (vec_t)allocator_create(alloc, &g_vec_class, &vvi);
+  vec_init_t tvi = {.auto_dispose = false};
+  vec_t type_vec = (vec_t)allocator_create(alloc, &g_vec_class, &tvi);
+
+  value_t err = _eval_positional_items_with_spread(vm, node->items, shadow,
+                                                    value_vec, type_vec);
+  if (err) {
+    allocator_free(alloc, &value_vec);
+    allocator_free(alloc, &type_vec);
+    return err;
   }
 
-  for (size_t i = 0; i < count; i++) {
-    node_t item = (node_t)vec_get(node->items, i);
-    value_t v = _eval_positional(vm, item, shadow);
-    if (value_is_abnormal(v)) {
-      allocator_free(alloc, &elems);
-      allocator_free(alloc, &elem_types);
-      return v;
-    }
-    elems[i] = v;
-    vec_push(elem_types, value_get_type(v));
+  size_t count = vec_get_size(value_vec);
+
+  /* empty list handled by caller as empty struct */
+  if (count == 0) {
+    allocator_free(alloc, &value_vec);
+    allocator_free(alloc, &type_vec);
+    return create_exception_value(vm, "initialize_list: empty anonymous tuple");
   }
 
-  value_t tv = vm_create_tuple_type_value(vm, elem_types, true);
-  allocator_free(alloc, &elem_types);
+  value_t tv = vm_create_tuple_type_value(vm, type_vec, true);
+  allocator_free(alloc, &type_vec);
   if (value_is_abnormal(tv)) {
-    allocator_free(alloc, &elems);
+    allocator_free(alloc, &value_vec);
     return tv;
   }
   tuple_type_t tt = (tuple_type_t)value_get_data(tv);
 
   if (shadow) {
-    allocator_free(alloc, &elems);
+    allocator_free(alloc, &value_vec);
     return create_tuple_shadow(vm, tt, true);
   }
 
+  value_t *elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
+  if (!elems) {
+    allocator_free(alloc, &value_vec);
+    return create_exception_value(vm, "initialize_list: out of memory");
+  }
+  for (size_t i = 0; i < count; i++)
+    elems[i] = (value_t)vec_get(value_vec, i);
+
   value_t result = create_tuple_value(vm, tt, elems);
   allocator_free(alloc, &elems);
+  allocator_free(alloc, &value_vec);
   return result;
 }
 

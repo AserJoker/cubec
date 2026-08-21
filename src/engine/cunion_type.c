@@ -178,42 +178,6 @@ static void _cunion_type_dispose(void *self, allocator_t allocator) {
   }
 }
 
-static void _cunion_type_clone(void *self, allocator_t allocator, void *another) {
-  cunion_type_t dst = (cunion_type_t)self;
-  cunion_type_t src = (cunion_type_t)another;
-
-  dst->base.kind    = src->base.kind;
-  dst->base.name    = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
-  dst->base.size    = src->base.size;
-  dst->base.align   = src->base.align;
-  dst->base.mut     = src->base.mut;
-  dst->base.vtable  = src->base.vtable;
-
-  /* clone scope — isolated, no parent */
-  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
-
-  /* clone fields — field types are global singletons (vm->types), do not
-   * clone; share the same type_t pointer. */
-  vec_init_t vi = {.auto_dispose = true};
-  dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
-  size_t fc = vec_get_size(src->fields);
-  for (size_t i = 0; i < fc; i++) {
-    field_info_t fi = (field_info_t)vec_get(src->fields, i);
-    _field_info_init_t fiinit = {
-        .name   = field_info_get_name(fi),
-        .type   = field_info_get_type(fi), /* borrowed: types managed by vm->types */
-        .offset = field_info_get_offset(fi),
-        .pub    = field_info_is_pub(fi),
-    };
-    field_info_t cloned = (field_info_t)allocator_create(allocator,
-                                                          &g_field_info_class, &fiinit);
-    vec_push(dst->fields, cloned);
-  }
-
-  dst->sealed    = src->sealed;
-  dst->module_id = src->module_id;
-}
-
 class_t g_cunion_type_class = {
     .size    = sizeof(struct _cunion_type_t),
     .name    = "cubec.engine.cunion_type",

@@ -2,6 +2,7 @@
 #define _H_CUBEC_ENGINE_VALUE_
 #include "core/allocator.h"
 #include "core/class.h"
+#include "core/vec.h"
 #include <stdbool.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -65,6 +66,13 @@ value_t value_deref_set(struct _vm_t *vm, value_t self, value_t val);
  * @brief Value-level extends: delegates to type->vtable.extends.
  * @return bool value on success, error value if vtable.extends is NULL. */
 value_t value_extends(struct _vm_t *vm, value_t sub, value_t super_val);
+
+/**
+ * @brief Spread/expansion: expand a value into a vec of element values.
+ * Delegates to type->vtable.spread.
+ * @return owned vec_t of borrowed value_t refs (auto_dispose=false),
+ *         or NULL if the type does not support spread. */
+vec_t value_spread(struct _vm_t *vm, value_t self);
 
 /* ---- Binary operators ---- */
 

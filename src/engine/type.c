@@ -6,6 +6,7 @@
 #include "engine/bool_type.h"
 #include "engine/void_type.h"
 #include "engine/exception_type.h"
+#include "engine/tuple_type.h"
 #include "core/string.h"
 #include "core/vec.h"
 #include <string.h>
@@ -223,6 +224,27 @@ static value_t _type_set_prop(vm_t vm, value_t self, const char *name, value_t v
   return inner->vtable.type_set_prop(vm, inner, name, val);
 }
 
+static vec_t _type_spread(vm_t vm, value_t self) {
+  type_t inner = (type_t)value_get_data(self);
+  /* If the inner type is a tuple, expand it into individual type values */
+  if (inner->kind == TYPE_KIND_TUPLE) {
+    tuple_type_t tt = (tuple_type_t)inner;
+    allocator_t allocator = vm_get_allocator(vm);
+    type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t result = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+    uint64_t fc = tuple_type_get_field_count(tt);
+    for (uint64_t i = 0; i < fc; i++) {
+      type_t elem = tuple_type_get_element_type(tt, i);
+      /* wrap each element type as a type value */
+      value_t tv = vm_create_value_ref(vm, type_type, elem, NULL);
+      vec_push(result, tv);
+    }
+    return result;
+  }
+  return NULL;
+}
+
 type_t type_get_type_type(allocator_t allocator) {
   type_init_t init = {
       .kind  = TYPE_KIND_TYPE,
@@ -240,6 +262,7 @@ type_t type_get_type_type(allocator_t allocator) {
           .set_prop = _type_set_prop,
           .type_get_prop = NULL,
           .type_set_prop = NULL,
+          .spread = _type_spread,
       },
   };
   return (type_t)allocator_create(allocator, &g_type_class, &init);

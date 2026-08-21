@@ -240,8 +240,8 @@ TEST_F(it_scope, dispose_scope_with_values) {
   value_t v = create_bool_value(vm, true);
   (void)v;
   vm_set_scope(vm, prev);
-  /* 32 bootstrap types (incl. error struct) + 1 interrupt type + 2 nil/opaque type values + 1 wildcard value + 1 const wildcard value + 1 bool value + 1 panic callable = 39 */
-  EXPECT_EQ(vec_get_size(global->values), 39u);
+  /* 32 bootstrap types (incl. error struct) + 1 interrupt type + 2 nil/pack type values + 1 opaque type value + 1 wildcard value + 1 const wildcard value + 1 bool value + 1 panic callable = 40 */
+  EXPECT_EQ(vec_get_size(global->values), 40u);
 
   vm_dispose(vm, allocator);
 }
@@ -257,7 +257,7 @@ TEST_F(it_scope, vm_dispose_cleans_child_scope_values) {
   (void)v;
   vm_set_scope(vm, prev);
   /* bool value is in global scope */
-  EXPECT_EQ(vec_get_size(global->values), 39u); /* 32 bootstrap types + interrupt type + nil/opaque + wildcard + const_wildcard + bool_value + panic callable */
+  EXPECT_EQ(vec_get_size(global->values), 40u); /* 32 bootstrap types + interrupt type + nil/pack/opaque + wildcard + const_wildcard + bool_value + panic callable */
 
   /* child scope has no values */
   EXPECT_EQ(vec_get_size(child->values), 0u);

@@ -137,30 +137,6 @@ static void _callable_type_dispose(void *self, allocator_t allocator) {
   }
 }
 
-static void _callable_type_clone(void *self, allocator_t allocator, void *another) {
-  callable_type_t dst = (callable_type_t)self;
-  callable_type_t src = (callable_type_t)another;
-
-  dst->base.kind   = src->base.kind;
-  dst->base.name   = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
-  dst->base.size   = src->base.size;
-  dst->base.align  = src->base.align;
-  dst->base.mut    = src->base.mut;
-  dst->base.vtable = src->base.vtable;
-
-  vec_init_t vi = {.auto_dispose = false};
-  dst->param_types = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
-  for (uint64_t i = 0; i < src->param_count; i++) {
-    type_t elem = (type_t)vec_get(src->param_types, (size_t)i);
-    vec_push(dst->param_types, elem);
-  }
-
-  dst->return_type = src->return_type; /* borrowed: types managed by vm->types */
-  dst->param_count = src->param_count;
-  dst->is_variadic = src->is_variadic;
-  dst->module_id   = src->module_id;
-}
-
 class_t g_callable_type_class = {
     .size    = sizeof(struct _callable_type_t),
     .name    = "cubec.engine.callable_type",

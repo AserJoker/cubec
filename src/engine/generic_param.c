@@ -9,6 +9,7 @@ static void _generic_param_init(void *self, allocator_t allocator, void *arg) {
 
   gp->name = init->name ? cstring_clone(allocator, init->name) : NULL;
   gp->type = init->type; /* borrowed: types managed by vm->types */
+  gp->is_rest = init->is_rest;
 
   vec_init_t vi = {.auto_dispose = false};
   gp->extends = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
@@ -39,6 +40,7 @@ static void _generic_param_clone(void *self, allocator_t allocator, void *anothe
 
   dst->name = src->name ? cstring_clone(allocator, src->name) : NULL;
   dst->type = src->type; /* borrowed: types managed by vm->types */
+  dst->is_rest = src->is_rest;
 
   vec_init_t vi = {.auto_dispose = false};
   dst->extends = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
@@ -61,11 +63,12 @@ class_t g_generic_param_class = {
 /* ---- Public API ---- */
 
 generic_param_t generic_param_create(allocator_t allocator, const char *name,
-                                     type_t type, vec_t extends) {
+                                     type_t type, vec_t extends, bool is_rest) {
   generic_param_init_t init = {
       .name    = name,
       .type    = type,
       .extends = extends,
+      .is_rest = is_rest,
   };
   return (generic_param_t)allocator_create(allocator, &g_generic_param_class, &init);
 }
@@ -73,6 +76,7 @@ generic_param_t generic_param_create(allocator_t allocator, const char *name,
 const char *generic_param_get_name(generic_param_t self) { return self->name; }
 type_t      generic_param_get_type(generic_param_t self) { return self->type; }
 vec_t       generic_param_get_extends(generic_param_t self) { return self->extends; }
+bool        generic_param_is_rest(generic_param_t self) { return self->is_rest; }
 
 /* ---- generic_instance_t class ---- */
 

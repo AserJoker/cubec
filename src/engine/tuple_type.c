@@ -25,6 +25,21 @@ static value_t _tuple_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _tuple_to_string(vm_t vm, value_t self);
 static value_t _tuple_get_item(vm_t vm, value_t self, value_t index);
 static value_t _tuple_set_item(vm_t vm, value_t self, value_t index, value_t val);
+static vec_t _tuple_spread(vm_t vm, value_t self) {
+  tuple_type_t tt = (tuple_type_t)value_get_type(self);
+  allocator_t allocator = vm_get_allocator(vm);
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t result = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  for (uint64_t i = 0; i < tt->field_count; i++) {
+    value_t elem = _tuple_get_item(vm, self, create_u64_value(vm, i));
+    if (value_is_abnormal(elem)) {
+      allocator_free(allocator, &result);
+      return NULL;
+    }
+    vec_push(result, elem);
+  }
+  return result;
+}
 
 static type_t _tuple_type_clone(vm_t vm, type_t self) {
   tuple_type_t src = (tuple_type_t)self;
@@ -95,6 +110,7 @@ static vtable_t _make_tuple_vtable(void) {
       .get_prop     = NULL,
       .set_prop     = NULL,
       .type_clone   = _tuple_type_clone,
+      .spread       = _tuple_spread,
   };
 }
 
@@ -165,8 +181,6 @@ static uint64_t _align_up(uint64_t value, uint64_t align) {
 tuple_type_t tuple_type_create(allocator_t allocator, vec_t element_types,
                                 bool mut) {
   uint64_t count = (uint64_t)vec_get_size(element_types);
-  if (count == 0)
-    return NULL; /* zero-field tuples are not semantically valid */
 
   /* compute offsets and total size/align */
   uint64_t *offsets = NULL;
@@ -495,8 +509,14 @@ static value_t _tuple_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 
 static value_t _tuple_get_item(vm_t vm, value_t self, value_t index) {
   tuple_type_t tt = (tuple_type_t)value_get_type(self);
-  if (value_is_shadow(self))
-    return vm_create_value_shadow(vm, (type_t)vec_get(tt->element_types, 0), NULL, true);
+  if (value_is_shadow(self)) {
+    uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
+    if (i >= tt->field_count)
+      return create_exception_value(vm, "tuple index %llu out of bounds (fields %llu)",
+                                    (unsigned long long)i,
+                                    (unsigned long long)tt->field_count);
+    return vm_create_value_shadow(vm, (type_t)vec_get(tt->element_types, (size_t)i), NULL, true);
+  }
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= tt->field_count)
     return create_exception_value(vm, "tuple index %llu out of bounds (fields %llu)",

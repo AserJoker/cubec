@@ -3,6 +3,7 @@
 #include "cubec/declaration_function.h"
 #include "cubec/declaration_struct.h"
 #include "cubec/function_argument.h"
+#include "cubec/function_capture.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/struct_field.h"
 #include "engine/ast_func.h"
@@ -12,8 +13,10 @@
 #include "engine/generic_fn_type.h"
 #include "engine/generic_param.h"
 #include "engine/generic_type.h"
+#include "engine/name.h"
 #include "engine/scope.h"
 #include "engine/struct_type.h"
+#include "engine/tuple_type.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/vm.h"
@@ -69,6 +72,9 @@ static value_t _cache_lookup(vm_t vm, generic_type_t gt, size_t argc,
  * @brief Push a temporary scope as child of the current scope and bind
  * generic parameter names to concrete argument values.
  *
+ * For pack params (is_rest=true), all remaining argv values are collected
+ * into a tuple type value bound to the pack param name.
+ *
  * Argument values are borrowed (owned by the caller's scope); we only bind
  * names, and do NOT push argv into temp->values — that would double-free on
  * scope_dispose.
@@ -81,16 +87,48 @@ static scope_t _bind_params(vm_t vm, generic_type_t gt, size_t argc,
   allocator_t allocator = vm_get_allocator(vm);
   scope_t parent = vm_get_current_scope(vm);
   scope_t temp = scope_create(allocator, SCOPE_TYPE, parent, NULL);
+  type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
 
   vec_t param_defs = generic_type_get_params(gt);
-  for (size_t i = 0; i < argc; i++) {
+  size_t param_count = vec_get_size(param_defs);
+  size_t argv_idx = 0;
+
+  for (size_t i = 0; i < param_count; i++) {
     generic_param_t gp = (generic_param_t)vec_get(param_defs, i);
     const char *pname = generic_param_get_name(gp);
 
-    /* bind name -> concrete value (borrowing: value owned by caller's scope).
-     * Do NOT push to temp->values — that would double-free on scope_dispose. */
-    name_t name = name_create(temp->allocator, argv[i]);
-    strmap_insert(temp->names, pname, name);
+    if (generic_param_is_rest(gp)) {
+      /* Pack param: collect remaining argv into a tuple type value.
+       * Always process pack params even when argv_idx >= argc (empty pack),
+       * so the name is bound to an empty tuple type value. */
+      vec_init_t etvi = {.auto_dispose = false};
+      vec_t element_types = (vec_t)allocator_create(allocator, &g_vec_class, &etvi);
+      while (argv_idx < argc) {
+        /* argv[argv_idx] is a type value (TYPE_KIND_TYPE) — extract the type */
+        if (type_get_kind(value_get_type(argv[argv_idx])) == TYPE_KIND_TYPE) {
+          type_t t = (type_t)value_get_data(argv[argv_idx]);
+          vec_push(element_types, t);
+        }
+        argv_idx++;
+      }
+      /* create a tuple type wrapping all absorbed types (may be empty) */
+      tuple_type_t tt = tuple_type_create(allocator, element_types, true);
+      allocator_free(allocator, &element_types);
+      vec_push(vm_get_types(vm), tt); /* register so vm_dispose frees it */
+      /* wrap as type value and bind */
+      value_t pack_val = vm_create_value_ref(vm, type_type, (type_t)tt, pname);
+      name_t name = name_create(temp->allocator, pack_val);
+      char *owned = cstring_clone(temp->allocator, pname);
+      strmap_insert(temp->names, owned, name);
+      allocator_free(temp->allocator, &owned);
+    } else {
+      if (argv_idx >= argc)
+        break; /* not enough args for remaining non-rest params */
+      /* Normal param: bind name -> single concrete value */
+      name_t name = name_create(temp->allocator, argv[argv_idx]);
+      strmap_insert(temp->names, pname, name);
+      argv_idx++;
+    }
   }
 
   vm_push_scope(vm, temp);
@@ -371,6 +409,9 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
                                     type_get_name(value_get_type(type_val)));
     }
     type_t pt = (type_t)value_get_data(type_val);
+    /* For rest params (...args: T), the type expression evaluates to a tuple
+     * type (because the pack param T is bound to a tuple type value).
+     * Push that tuple type as the single rest parameter type. */
     vec_push(param_types, pt); /* borrowed: types managed by vm->types */
   }
 
@@ -407,14 +448,42 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
 
   /* 8. create template_scope with generic param → concrete type bindings */
   scope_t template_scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+  type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
   vec_t param_defs = generic_fn_type_get_params(gt_fn);
-  for (size_t i = 0; i < argc; i++) {
+  size_t pd_count = vec_get_size(param_defs);
+  size_t argv_idx = 0;
+  for (size_t i = 0; i < pd_count; i++) {
     generic_param_t gp = (generic_param_t)vec_get(param_defs, i);
     const char *pname = generic_param_get_name(gp);
-    name_t n = name_create(template_scope->allocator, argv[i]);
-    char *owned = cstring_clone(template_scope->allocator, pname);
-    strmap_insert(template_scope->names, owned, n);
-    allocator_free(template_scope->allocator, &owned);
+    if (generic_param_is_rest(gp)) {
+      /* pack param: collect remaining argv into a tuple type value.
+       * Always process pack params even when argv_idx >= argc (empty pack). */
+      vec_init_t etvi = {.auto_dispose = false};
+      vec_t element_types = (vec_t)allocator_create(allocator, &g_vec_class, &etvi);
+      while (argv_idx < argc) {
+        if (type_get_kind(value_get_type(argv[argv_idx])) == TYPE_KIND_TYPE) {
+          type_t t = (type_t)value_get_data(argv[argv_idx]);
+          vec_push(element_types, t);
+        }
+        argv_idx++;
+      }
+      tuple_type_t tt = tuple_type_create(allocator, element_types, true);
+      allocator_free(allocator, &element_types);
+      vec_push(vm_get_types(vm), tt); /* register so vm_dispose frees it */
+      value_t pack_val = vm_create_value_ref(vm, type_type, (type_t)tt, pname);
+      name_t n = name_create(template_scope->allocator, pack_val);
+      char *owned = cstring_clone(template_scope->allocator, pname);
+      strmap_insert(template_scope->names, owned, n);
+      allocator_free(template_scope->allocator, &owned);
+    } else {
+      if (argv_idx >= argc)
+        break;
+      name_t n = name_create(template_scope->allocator, argv[argv_idx]);
+      char *owned = cstring_clone(template_scope->allocator, pname);
+      strmap_insert(template_scope->names, owned, n);
+      allocator_free(template_scope->allocator, &owned);
+      argv_idx++;
+    }
   }
 
   /* 9. extract function name */
@@ -428,6 +497,49 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
    *    arguments and body. */
   value_t callable_val =
       create_ast_func_value(vm, ct, fn_name, (node_t)decl, template_scope);
+
+  /* 10b. bind closure captures into closure_scope */
+  if (decl->captures && vec_get_size(decl->captures) > 0) {
+    ast_func_t af = (ast_func_t)value_get_data(callable_val);
+    scope_t closure = func_get_closure_scope((func_t)af);
+    size_t cap_count = vec_get_size(decl->captures);
+    for (size_t ci = 0; ci < cap_count; ci++) {
+      cubec_function_capture_t cap =
+          (cubec_function_capture_t)vec_get(decl->captures, ci);
+      if (!cap || !cap->identifier)
+        continue;
+      const char *cap_name = string_get(
+          ((cubec_literal_identifier_t)cap->identifier)->value);
+      name_t found = scope_lookup(vm_get_current_scope(vm), cap_name);
+      if (!found || !found->ref) {
+        /* clone the callable_val before returning error so it gets cleaned up */
+        scope_t orig_scope2 = vm_get_current_scope(vm);
+        scope_t gt_scope2 = generic_fn_type_get_scope(gt_fn);
+        vm_set_scope(vm, gt_scope2);
+        (void)value_clone(vm, callable_val);
+        vm_set_scope(vm, orig_scope2);
+        return create_exception_value(vm,
+            "generic function '%s': closure capture '%s' not found in scope",
+            fn_name ? fn_name : "<anonymous>", cap_name);
+      }
+      /* clone the captured value into closure_scope */
+      scope_t prev = vm_set_scope(vm, closure);
+      value_t cloned = value_clone(vm, found->ref);
+      vm_set_scope(vm, prev);
+      if (value_is_abnormal(cloned)) {
+        scope_t orig_scope2 = vm_get_current_scope(vm);
+        scope_t gt_scope2 = generic_fn_type_get_scope(gt_fn);
+        vm_set_scope(vm, gt_scope2);
+        (void)value_clone(vm, callable_val);
+        vm_set_scope(vm, orig_scope2);
+        return cloned;
+      }
+      name_t n = name_create(closure->allocator, cloned);
+      char *owned = cstring_clone(closure->allocator, cap_name);
+      strmap_insert(closure->names, owned, n);
+      allocator_free(closure->allocator, &owned);
+    }
+  }
 
   /* 11. clone the callable value into the generic fn's isolated scope */
   scope_t orig_scope = vm_get_current_scope(vm);

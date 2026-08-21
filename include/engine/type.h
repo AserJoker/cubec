@@ -2,6 +2,7 @@
 #define _H_CUBEC_ENGINE_TYPE_
 #include "core/allocator.h"
 #include "core/class.h"
+#include "core/vec.h"
 #include <stdbool.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -42,6 +43,7 @@ typedef enum type_kind_t {
   TYPE_KIND_ENUM, TYPE_KIND_INTERFACE,
   /* Compile-time only */
   TYPE_KIND_GENERIC, TYPE_KIND_GENERIC_FN,
+  TYPE_KIND_PACK,
 } type_kind_t;
 
 /**
@@ -133,6 +135,12 @@ struct vtable_t {
    * Sub-type pointers remain borrowed (point to vm->types singletons), no recursive clone.
    * Returns the new type_t. NULL for primitive types (use vm's pre-defined variants). */
   type_t (*type_clone)(vm_t vm, type_t self);
+  /* Spread/expansion: expand a value into a vec of element values.
+   * Used for ...T pack expansion in type positions (e.g., tuple<...T>)
+   * and ...args in function calls.
+   * Returns an owned vec_t of value_t (auto_dispose=false, borrowed refs),
+   * or NULL if the type does not support spread. */
+  vec_t (*spread)(vm_t vm, value_t self);
 };
 typedef struct vtable_t vtable_t;
 

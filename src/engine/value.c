@@ -161,6 +161,13 @@ value_t value_extends(vm_t vm, value_t sub, value_t super_val) {
   return vt.extends(vm, sub, super_val);
 }
 
+vec_t value_spread(vm_t vm, value_t self) {
+  type_t type = value_get_type(self);
+  if (!type->vtable.spread)
+    return NULL;
+  return type->vtable.spread(vm, self);
+}
+
 value_t value_band(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.band)

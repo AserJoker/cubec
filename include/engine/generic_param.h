@@ -20,6 +20,7 @@ struct _generic_param_t {
   char  *name;     /* owned */
   type_t type;     /* owned (alloc_clone'd) */
   vec_t  extends;  /* owned: auto_dispose=true vec of type_t */
+  bool   is_rest;  /* true if this is a variadic pack parameter (...T) */
 };
 typedef struct _generic_param_t *generic_param_t;
 
@@ -31,16 +32,18 @@ typedef struct generic_param_init_t {
   const char *name;    /* borrowed, will be cloned */
   type_t      type;    /* borrowed, will be alloc_clone'd */
   vec_t       extends; /* borrowed vec of type_t, each will be alloc_clone'd */
+  bool        is_rest; /* true if this is a variadic pack parameter */
 } generic_param_init_t;
 
 /** @brief Create a generic parameter. */
 generic_param_t generic_param_create(allocator_t allocator, const char *name,
-                                     type_t type, vec_t extends);
+                                     type_t type, vec_t extends, bool is_rest);
 
 /** @brief Accessors. */
 const char *generic_param_get_name(generic_param_t self);
 type_t      generic_param_get_type(generic_param_t self);
 vec_t       generic_param_get_extends(generic_param_t self);
+bool        generic_param_is_rest(generic_param_t self);
 
 /* ---- create_instance callback ---- */
 

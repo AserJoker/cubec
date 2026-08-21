@@ -73,6 +73,7 @@ value_t vm_get_wildcard_type(vm_t self);
 value_t vm_get_const_wildcard_type(vm_t self);
 value_t vm_get_void_type(vm_t self);
 value_t vm_get_nil_type(vm_t self);
+value_t vm_get_pack_type(vm_t self);
 value_t vm_get_opaque_type(vm_t self);
 value_t vm_get_const_bool_type(vm_t self);
 value_t vm_get_i8_type(vm_t self);

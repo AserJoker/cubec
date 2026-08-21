@@ -152,47 +152,6 @@ static void _enum_type_dispose(void *self, allocator_t allocator) {
   et->module_id = NULL;
 }
 
-static void _enum_type_clone(void *self, allocator_t allocator, void *another) {
-  enum_type_t dst = (enum_type_t)self;
-  enum_type_t src = (enum_type_t)another;
-
-  dst->base.kind    = src->base.kind;
-  dst->base.name    = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
-  dst->base.size    = src->base.size;
-  dst->base.align   = src->base.align;
-  dst->base.mut     = src->base.mut;
-  dst->base.vtable  = src->base.vtable;
-
-  dst->underlying   = src->underlying; /* borrowed: types managed by vm->types */
-
-  /* clone isolated scope */
-  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
-
-  /* rebuild items: for each src item, clone its value into dst->scope */
-  strmap_init_t smi = {.value_auto_dispose = false};
-  dst->items = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
-  strmap_iter_t it = strmap_iter_first(src->items);
-  const char *key;
-  while ((key = strmap_iter_next(&it)) != NULL) {
-    value_t sv = (value_t)strmap_find(src->items, key);
-    type_t  src_type = value_get_type(sv);
-    void   *src_data = value_get_data(sv);
-    uint64_t sz = type_get_size(src_type);
-    void *new_data = NULL;
-    if (sz > 0 && src_data) {
-      new_data = allocator_alloc(allocator, sz);
-      memcpy(new_data, src_data, (size_t)sz);
-    }
-    /* item value owns its own real underlying buffer (own=true) */
-    value_t cv = value_create(allocator, src_type, new_data, true);
-    value_set_initialized(cv, value_is_initialized(sv));
-    vec_push(dst->scope->values, cv);
-    strmap_insert(dst->items, key, cv);
-  }
-
-  dst->module_id = src->module_id;
-}
-
 class_t g_enum_type_class = {
     .size    = sizeof(struct _enum_type_t),
     .name    = "cubec.engine.enum_type",

@@ -13,12 +13,15 @@
 #include "engine/generic_param.h"
 #include "engine/ast_func.h"
 #include "engine/func.h"
+#include "engine/pack_type.h"
+#include "engine/tuple_type.h"
 #include "core/string.h"
 #include "core/vec.h"
 #include "core/location.h"
 #include "cubec/declaration_function.h"
 #include "cubec/function_argument.h"
 #include "cubec/literal_identifier.h"
+#include "cubec/literal_nil.h"
 #include "cubec/expression_binary.h"
 #include "cubec/statement_return.h"
 #include "cubec/statement_block.h"
@@ -70,7 +73,7 @@ protected:
     type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
     vec_init_t vi = {.auto_dispose = true};
     vec_t extends = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
-    generic_param_t gp = generic_param_create(alloc, name, type_type, extends);
+    generic_param_t gp = generic_param_create(alloc, name, type_type, extends, false);
     allocator_free(alloc, &extends);
     return gp;
   }
@@ -83,9 +86,26 @@ protected:
     vec_init_t vi = {.auto_dispose = false};
     vec_t extends = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
     vec_push(extends, constraint); /* borrowed: types managed by vm->types */
-    generic_param_t gp = generic_param_create(alloc, name, type_type, extends);
+    generic_param_t gp = generic_param_create(alloc, name, type_type, extends, false);
     allocator_free(alloc, &extends);
     return gp;
+  }
+
+  /* Create a pack (rest) generic_param_t (...T) */
+  generic_param_t _make_pack_param(vm_t vm, const char *name) {
+    allocator_t alloc = vm_get_allocator(vm);
+    type_t pack_type = (type_t)value_get_data(vm_get_pack_type(vm));
+    vec_init_t vi = {.auto_dispose = true};
+    vec_t extends = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
+    generic_param_t gp = generic_param_create(alloc, name, pack_type, extends, true);
+    allocator_free(alloc, &extends);
+    return gp;
+  }
+
+  /* Helper: wrap a type_t as a type value */
+  value_t _type_val(vm_t vm, type_t t) {
+    type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
+    return vm_create_value_ref(vm, type_type, t, NULL);
   }
 };
 
@@ -283,6 +303,196 @@ TEST_F(it_generic_fn_type, extends_constraint_violation) {
   value_t i32_type_val = vm_create_value_ref(vm, type_type,
                                               _get_i32_type(vm), NULL);
   value_t inst = value_instantiate(vm, gen_val, 1, &i32_type_val);
+  EXPECT_TRUE(value_is_abnormal(inst));
+  EXPECT_EQ(type_get_kind(value_get_type(inst)), TYPE_KIND_EXCEPTION);
+
+  allocator_free(alloc, &func_node);
+  vm_dispose(vm, allocator);
+}
+
+/* ---- Pack parameter tests ---- */
+
+TEST_F(it_generic_fn_type, pack_param_is_rest) {
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+
+  generic_param_t gp = _make_pack_param(vm, "Args");
+  EXPECT_TRUE(generic_param_is_rest(gp));
+  EXPECT_EQ(type_get_kind(generic_param_get_type(gp)), TYPE_KIND_PACK);
+
+  allocator_free(alloc, &gp);
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_generic_fn_type, pack_param_instantiate_with_multiple_args) {
+  /* func foo[...T](args: T) -> void { }
+   * foo[i32, str] — pack T absorbs 2 type arguments */
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+  location_t loc = _dummy_loc();
+
+  vec_init_t avi = {.auto_dispose = true};
+  vec_t args = (vec_t)allocator_create(alloc, &g_vec_class, &avi);
+  vec_push(args, create_function_argument(vm, loc, "args",
+      create_literal_identifier(vm, loc, "T")));
+
+  node_t ret_type = create_literal_identifier(vm, loc, "void");
+  node_t body_expr = create_literal_nil(vm, loc);
+  node_t func_node = _build_func_ast(vm, "foo", args, ret_type, body_expr);
+
+  vec_init_t pvi = {.auto_dispose = true};
+  vec_t params_vec = (vec_t)allocator_create(alloc, &g_vec_class, &pvi);
+  vec_push(params_vec, _make_pack_param(vm, "T"));
+
+  generic_fn_type_t gt = generic_fn_type_create(alloc, "foo",
+                                                  params_vec, func_node);
+  allocator_free(alloc, &params_vec);
+
+  vec_push(vm_get_types(vm), gt);
+
+  value_t gen_val = vm_create_value_ref(vm, (type_t)gt,
+                                         (const void *)create_fn_instance,
+                                         "foo");
+
+  value_t type_args[2] = {
+      _type_val(vm, _get_i32_type(vm)),
+      _type_val(vm, _get_str_type(vm)),
+  };
+  value_t inst = value_instantiate(vm, gen_val, 2, type_args);
+
+  EXPECT_FALSE(value_is_abnormal(inst));
+  if (!value_is_abnormal(inst)) {
+    EXPECT_EQ(type_get_kind(value_get_type(inst)), TYPE_KIND_CALLABLE);
+  }
+
+  allocator_free(alloc, &func_node);
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_generic_fn_type, pack_param_instantiate_with_zero_args) {
+  /* func foo[...T](args: T) -> void { }
+   * foo[] — pack T absorbs 0 arguments (empty pack) */
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+  location_t loc = _dummy_loc();
+
+  vec_init_t avi = {.auto_dispose = true};
+  vec_t args = (vec_t)allocator_create(alloc, &g_vec_class, &avi);
+  vec_push(args, create_function_argument(vm, loc, "args",
+      create_literal_identifier(vm, loc, "T")));
+
+  node_t ret_type = create_literal_identifier(vm, loc, "void");
+  node_t body_expr = create_literal_nil(vm, loc);
+  node_t func_node = _build_func_ast(vm, "foo", args, ret_type, body_expr);
+
+  vec_init_t pvi = {.auto_dispose = true};
+  vec_t params_vec = (vec_t)allocator_create(alloc, &g_vec_class, &pvi);
+  vec_push(params_vec, _make_pack_param(vm, "T"));
+
+  generic_fn_type_t gt = generic_fn_type_create(alloc, "foo",
+                                                  params_vec, func_node);
+  allocator_free(alloc, &params_vec);
+
+  vec_push(vm_get_types(vm), gt);
+
+  value_t gen_val = vm_create_value_ref(vm, (type_t)gt,
+                                         (const void *)create_fn_instance,
+                                         "foo");
+
+  value_t inst = value_instantiate(vm, gen_val, 0, NULL);
+
+  EXPECT_FALSE(value_is_abnormal(inst));
+  if (!value_is_abnormal(inst)) {
+    EXPECT_EQ(type_get_kind(value_get_type(inst)), TYPE_KIND_CALLABLE);
+  }
+
+  allocator_free(alloc, &func_node);
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_generic_fn_type, pack_param_mixed_with_normal_param) {
+  /* func foo[A, ...T](first: A, rest: T) -> void { }
+   * foo[i32, str, bool] — A=i32, T={str, bool} */
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+  location_t loc = _dummy_loc();
+
+  vec_init_t avi = {.auto_dispose = true};
+  vec_t args = (vec_t)allocator_create(alloc, &g_vec_class, &avi);
+  vec_push(args, create_function_argument(vm, loc, "first",
+      create_literal_identifier(vm, loc, "A")));
+  vec_push(args, create_function_argument(vm, loc, "rest",
+      create_literal_identifier(vm, loc, "T")));
+
+  node_t ret_type = create_literal_identifier(vm, loc, "void");
+  node_t body_expr = create_literal_nil(vm, loc);
+  node_t func_node = _build_func_ast(vm, "foo", args, ret_type, body_expr);
+
+  vec_init_t pvi = {.auto_dispose = true};
+  vec_t params_vec = (vec_t)allocator_create(alloc, &g_vec_class, &pvi);
+  vec_push(params_vec, _make_type_param(vm, "A"));
+  vec_push(params_vec, _make_pack_param(vm, "T"));
+
+  generic_fn_type_t gt = generic_fn_type_create(alloc, "foo",
+                                                  params_vec, func_node);
+  allocator_free(alloc, &params_vec);
+
+  vec_push(vm_get_types(vm), gt);
+
+  value_t gen_val = vm_create_value_ref(vm, (type_t)gt,
+                                         (const void *)create_fn_instance,
+                                         "foo");
+
+  value_t type_args[3] = {
+      _type_val(vm, _get_i32_type(vm)),
+      _type_val(vm, _get_str_type(vm)),
+      _type_val(vm, _get_bool_type(vm)),
+  };
+  value_t inst = value_instantiate(vm, gen_val, 3, type_args);
+
+  EXPECT_FALSE(value_is_abnormal(inst));
+  if (!value_is_abnormal(inst)) {
+    EXPECT_EQ(type_get_kind(value_get_type(inst)), TYPE_KIND_CALLABLE);
+  }
+
+  allocator_free(alloc, &func_node);
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_generic_fn_type, pack_param_too_few_args) {
+  /* func foo[A, ...T](first: A, rest: T) -> void { }
+   * foo[] — fails: needs at least 1 arg (for A) */
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+  location_t loc = _dummy_loc();
+
+  vec_init_t avi = {.auto_dispose = true};
+  vec_t args = (vec_t)allocator_create(alloc, &g_vec_class, &avi);
+  vec_push(args, create_function_argument(vm, loc, "first",
+      create_literal_identifier(vm, loc, "A")));
+  vec_push(args, create_function_argument(vm, loc, "rest",
+      create_literal_identifier(vm, loc, "T")));
+
+  node_t ret_type = create_literal_identifier(vm, loc, "void");
+  node_t body_expr = create_literal_nil(vm, loc);
+  node_t func_node = _build_func_ast(vm, "foo", args, ret_type, body_expr);
+
+  vec_init_t pvi = {.auto_dispose = true};
+  vec_t params_vec = (vec_t)allocator_create(alloc, &g_vec_class, &pvi);
+  vec_push(params_vec, _make_type_param(vm, "A"));
+  vec_push(params_vec, _make_pack_param(vm, "T"));
+
+  generic_fn_type_t gt = generic_fn_type_create(alloc, "foo",
+                                                  params_vec, func_node);
+  allocator_free(alloc, &params_vec);
+
+  vec_push(vm_get_types(vm), gt);
+
+  value_t gen_val = vm_create_value_ref(vm, (type_t)gt,
+                                         (const void *)create_fn_instance,
+                                         "foo");
+
+  value_t inst = value_instantiate(vm, gen_val, 0, NULL);
   EXPECT_TRUE(value_is_abnormal(inst));
   EXPECT_EQ(type_get_kind(value_get_type(inst)), TYPE_KIND_EXCEPTION);
 

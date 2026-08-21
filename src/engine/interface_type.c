@@ -90,31 +90,6 @@ static void _interface_type_dispose(void *self, allocator_t allocator) {
   }
 }
 
-static void _interface_type_clone(void *self, allocator_t allocator, void *another) {
-  interface_type_t dst = (interface_type_t)self;
-  interface_type_t src = (interface_type_t)another;
-
-  dst->base.kind   = src->base.kind;
-  dst->base.name   = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
-  dst->base.size   = src->base.size;
-  dst->base.align  = src->base.align;
-  dst->base.mut    = src->base.mut;
-  dst->base.vtable = src->base.vtable;
-
-  strmap_init_t si = {.value_auto_dispose = false};
-  dst->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &si);
-  /* borrow each method callable_type_t (types are global singletons) */
-  strmap_iter_t iter = strmap_iter_first(src->methods);
-  const char *key;
-  while ((key = strmap_iter_next(&iter)) != NULL) {
-    callable_type_t src_ct = (callable_type_t)strmap_find(src->methods, key);
-    strmap_insert(dst->methods, key, src_ct);
-  }
-
-  dst->sealed   = src->sealed;
-  dst->module_id = src->module_id;
-}
-
 class_t g_interface_type_class = {
     .size    = sizeof(struct _interface_type_t),
     .name    = "cubec.engine.interface_type",

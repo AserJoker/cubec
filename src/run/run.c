@@ -63,8 +63,14 @@ value_t run_expression(vm_t vm, node_t node, bool shadow) {
     result = run_declaration_qualifier(vm, node, shadow); break;
   case CUBEC_NODE_DECLARATION_FUNCTION:
     result = run_declaration_function(vm, node, shadow); break;
+  case CUBEC_NODE_DECLARATION_TUPLE:
+    result = run_declaration_tuple(vm, node, shadow); break;
+  case CUBEC_NODE_DECLARATION_CALLABLE:
+    result = run_declaration_callable(vm, node, shadow); break;
   case CUBEC_NODE_EXPRESSION_WILDCARD:
     result = run_expression_wildcard(vm, node, shadow); break;
+  case CUBEC_NODE_EXPRESSION_SPREAD:
+    result = run_expression_spread(vm, node, shadow); break;
   default:
     result = create_exception_value(vm,
                                     "run_expression: unsupported node kind %d",

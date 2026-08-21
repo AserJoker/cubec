@@ -114,7 +114,7 @@ protected:
   generic_param_t _make_param(const char *name, type_t type) {
     vec_init_t vi = {.auto_dispose = true};
     vec_t extends = (vec_t)allocator_create(alloc(), &g_vec_class, &vi);
-    generic_param_t gp = generic_param_create(alloc(), name, type, extends);
+    generic_param_t gp = generic_param_create(alloc(), name, type, extends, false);
     allocator_free(alloc(), &extends);
     return gp;
   }

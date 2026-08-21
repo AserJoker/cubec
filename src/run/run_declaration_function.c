@@ -9,10 +9,12 @@
 #include "engine/name.h"
 #include "engine/generic_fn_type.h"
 #include "engine/generic_param.h"
+#include "engine/pack_type.h"
 #include "engine/callable_type.h"
 #include "engine/ast_func.h"
 #include "cubec/declaration_function.h"
 #include "cubec/function_argument.h"
+#include "cubec/function_capture.h"
 #include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
 #include "core/string.h"
@@ -41,8 +43,10 @@ static vec_t _build_generic_params(vm_t vm, vec_t ast_params,
         (cubec_generic_param_t)vec_get(ast_params, i);
     const char *pname = _get_name(ast_param->name);
 
-    /* determine param type */
-    type_t param_type = type_type;
+    /* determine param type: pack params get TYPE_KIND_PACK, others get TYPE_KIND_TYPE */
+    type_t param_type = ast_param->is_rest
+        ? (type_t)value_get_data(vm_get_pack_type(vm))
+        : type_type;
     if (ast_param->value_type) {
       value_t vt = run_expression(vm, ast_param->value_type, false);
       if (value_is_abnormal(vt)) {
@@ -89,7 +93,7 @@ static vec_t _build_generic_params(vm_t vm, vec_t ast_params,
     }
 
     generic_param_t gp = generic_param_create(allocator, pname, param_type,
-                                                extends);
+                                                extends, ast_param->is_rest);
     allocator_free(allocator, &extends);
     vec_push(params_vec, gp);
   }
@@ -127,6 +131,55 @@ static vec_t _eval_param_types(vm_t vm, vec_t arguments,
   }
 
   return param_types;
+}
+
+/* ---- helper: bind closure captures into closure_scope ---- */
+
+/**
+ * @brief Iterate captures from declaration_function_t, look up each name
+ * in the current scope chain, and bind a cloned copy into the closure_scope.
+ *
+ * @return true on success, false if any capture name is not found.
+ */
+static bool _bind_captures(vm_t vm, cubec_declaration_function_t decl,
+                           scope_t closure_scope) {
+  if (!decl->captures)
+    return true;
+
+  size_t count = vec_get_size(decl->captures);
+
+  for (size_t i = 0; i < count; i++) {
+    cubec_function_capture_t cap =
+        (cubec_function_capture_t)vec_get(decl->captures, i);
+    if (!cap || !cap->identifier)
+      continue;
+
+    const char *cap_name = string_get(
+        ((cubec_literal_identifier_t)cap->identifier)->value);
+
+    /* look up the captured variable in the current scope chain */
+    name_t found = scope_lookup(vm_get_current_scope(vm), cap_name);
+    if (!found || !found->ref) {
+      /* capture not found — report error */
+      return false;
+    }
+
+    /* clone the value into closure_scope so the closure owns its own copy */
+    scope_t prev = vm_set_scope(vm, closure_scope);
+    value_t cloned = value_clone(vm, found->ref);
+    vm_set_scope(vm, prev);
+
+    if (value_is_abnormal(cloned))
+      return false;
+
+    /* bind name in closure_scope */
+    name_t n = name_create(closure_scope->allocator, cloned);
+    char *owned = cstring_clone(closure_scope->allocator, cap_name);
+    strmap_insert(closure_scope->names, owned, n);
+    allocator_free(closure_scope->allocator, &owned);
+  }
+
+  return true;
 }
 
 /* ---- main: construct function value from declaration node ---- */
@@ -229,5 +282,26 @@ value_t run_declaration_function(vm_t vm, node_t node, bool shadow) {
    *   af->node to cubec_declaration_function_t to extract arguments and body)
    * - NULL for extern/builtin (calling will return exception) */
   node_t decl_node = (decl->is_extern || decl->is_builtin) ? NULL : (node_t)decl;
-  return create_ast_func_value(vm, ct, name, decl_node, NULL);
+  value_t func_val = create_ast_func_value(vm, ct, name, decl_node, NULL);
+
+  /* bind closure captures into closure_scope */
+  if (decl->captures && vec_get_size(decl->captures) > 0) {
+    ast_func_t af = (ast_func_t)value_get_data(func_val);
+    scope_t closure = func_get_closure_scope((func_t)af);
+    if (!_bind_captures(vm, decl, closure)) {
+      if (shadow) {
+        while (vm_get_current_scope(vm) != scope_before)
+          vm_pop_scope(vm);
+        diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                             node->location,
+                             "closure capture binding error");
+        return create_void_value(vm);
+      }
+      return create_exception_value(vm,
+          "run: function '%s' closure capture not found in scope",
+          name ? name : "<anonymous>");
+    }
+  }
+
+  return func_val;
 }

@@ -13,6 +13,7 @@
 #include "engine/module.h"
 #include "engine/nil_type.h"
 #include "engine/opaque_type.h"
+#include "engine/pack_type.h"
 #include "engine/pointer_type.h"
 #include "engine/result_type.h"
 #include "engine/scope.h"
@@ -66,6 +67,7 @@ struct _vm_t {
   value_t
       v_void; /* borrowed: bootstrap type "void" (in global_scope->values) */
   value_t v_nil;    /* borrowed: bootstrap type "nil" */
+  value_t v_pack;   /* borrowed: bootstrap type "...type" (pack) */
   value_t v_opaque; /* borrowed: bootstrap type "opaque" */
   value_t v_const_bool; /* borrowed: bootstrap type "const bool" (in
                            global_scope->values) */
@@ -188,6 +190,10 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   type_t nil_type = type_get_nil_type(allocator);
   vec_push(vm->types, nil_type);
   vm->v_nil = create_type_value(vm, nil_type, "nil", false);
+
+  type_t pack_type = type_get_pack_type(allocator);
+  vec_push(vm->types, pack_type);
+  vm->v_pack = create_type_value(vm, pack_type, "...type", false);
 
   type_t opaque_type = type_get_opaque_type(allocator);
   vec_push(vm->types, opaque_type);
@@ -458,6 +464,7 @@ value_t vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
 value_t vm_get_const_wildcard_type(vm_t self) { return self->v_const_wildcard; }
 value_t vm_get_void_type(vm_t self) { return self->v_void; }
 value_t vm_get_nil_type(vm_t self) { return self->v_nil; }
+value_t vm_get_pack_type(vm_t self) { return self->v_pack; }
 value_t vm_get_opaque_type(vm_t self) { return self->v_opaque; }
 value_t vm_get_const_bool_type(vm_t self) { return self->v_const_bool; }
 value_t vm_get_i8_type(vm_t self) { return self->v_i8; }
@@ -842,8 +849,6 @@ value_t vm_create_slice_type_value(vm_t self, type_t element_type, bool mut) {
 
 value_t vm_create_tuple_type_value(vm_t self, vec_t element_types, bool mut) {
   tuple_type_t tt = tuple_type_create(self->allocator, element_types, mut);
-  if (!tt)
-    return create_exception_value(self, "zero-field tuple is not valid");
   /* register tuple_type_t in vm->types for auto-dispose */
   vec_push(vm_get_types(self), tt);
   /* wrap as a type value — own=false because vm->types owns the type_t */
