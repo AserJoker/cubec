@@ -103,7 +103,7 @@ protected:
   /* Build an array type [3]i32 and bind as "Triple" */
   value_t _make_triple_type() {
     type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
-    value_t tv = vm_create_array_type_value(vm, i32_t, 3, true);
+    value_t tv = vm_create_array_type_value(vm, i32_t, create_i32_value(vm, 3), true);
     _bind("Triple", tv);
     return tv;
   }
@@ -315,7 +315,7 @@ TEST_F(it_run_initialize_list, typed_array_positional) {
   ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_ARRAY);
   array_type_t at = (array_type_t)value_get_type(v);
-  EXPECT_EQ(array_type_get_count(at), 3u);
+  EXPECT_EQ(array_type_get_count_value(at), 3u);
 
   for (uint64_t i = 0; i < 3; i++) {
     value_t idx = create_u64_value(vm, i);

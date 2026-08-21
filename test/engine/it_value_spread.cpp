@@ -42,7 +42,7 @@ protected:
 
   /* Helper: create a [3]i32 array type */
   array_type_t _make_i32_array3_type(vm_t vm) {
-    value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), 3, true);
+    value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), create_i32_value(vm, 3), true);
     return (array_type_t)value_get_data(tv);
   }
 };

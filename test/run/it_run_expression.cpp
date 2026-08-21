@@ -448,7 +448,7 @@ TEST_F(it_run_expression, member_on_non_struct_returns_error) {
 TEST_F(it_run_expression, subscript_array_element) {
   /* Create an array [3]i32 { 10, 20, 30 } */
   type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
-  array_type_t at = array_type_create(vm_get_allocator(vm), i32_t, 3, true);
+  array_type_t at = array_type_create(vm, i32_t, create_i32_value(vm, 3), true);
   vec_push(vm_get_types(vm), at);
 
   value_t e0 = create_i32_value(vm, 10);

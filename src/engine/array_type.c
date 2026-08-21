@@ -7,9 +7,12 @@
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
+#include "engine/wildcard_type.h"
 #include "engine/slice_type.h"
 #include "engine/type.h"
+#include "engine/name.h"
 #include "core/string.h"
+#include "core/strmap.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -31,6 +34,8 @@ static value_t _array_slice(vm_t vm, value_t self, uint64_t start, uint64_t coun
 static type_t _array_type_clone(vm_t vm, type_t self) {
   array_type_t src = (array_type_t)self;
   allocator_t allocator = vm_get_allocator(vm);
+
+  /* create new array type with same element_type and count value */
   array_type_t dst = (array_type_t)allocator_create(allocator, &g_array_type_class, NULL);
   dst->base.kind    = src->base.kind;
   dst->base.name    = cstring_clone(allocator, src->base.name);
@@ -39,7 +44,15 @@ static type_t _array_type_clone(vm_t vm, type_t self) {
   dst->base.mut     = src->base.mut;
   dst->base.vtable  = src->base.vtable;
   dst->element_type = src->element_type; /* borrowed from vm->types */
-  dst->count        = src->count;
+
+  /* isolated scope for count value lifecycle */
+  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+
+  /* clone count value into dst->scope */
+  scope_t prev = vm_set_scope(vm, dst->scope);
+  dst->count = value_clone(vm, src->count);
+  vm_set_scope(vm, prev);
+
   vec_push(vm_get_types(vm), dst);
   return (type_t)dst;
 }
@@ -89,16 +102,18 @@ static vtable_t _make_array_vtable(void) {
 /* ---- g_array_type_class lifecycle ---- */
 
 static void _array_type_init(void *self, allocator_t allocator, void *arg) {
+  (void)allocator;
   array_type_t at = (array_type_t)self;
   array_type_init_t *init = (array_type_init_t *)arg;
   at->base.kind   = init->kind;
-  at->base.name   = cstring_clone(allocator, init->name);
+  at->base.name   = init->name ? cstring_clone(allocator, init->name) : NULL;
   at->base.size   = init->size;
   at->base.align  = init->align;
   at->base.mut    = init->mut;
   at->base.vtable = init->vtable;
   at->element_type = init->element_type; /* borrowed: types managed by vm->types */
-  at->count        = init->count;
+  at->count        = init->count;        /* set by array_type_create after scope setup */
+  at->scope        = NULL;               /* set by array_type_create */
 }
 
 static void _array_type_dispose(void *self, allocator_t allocator) {
@@ -107,7 +122,13 @@ static void _array_type_dispose(void *self, allocator_t allocator) {
   at->base.name = NULL;
   /* element_type is borrowed from vm->types — do not free */
   at->element_type = NULL;
-  at->count = 0;
+  at->count = NULL;
+  /* dispose isolated scope (owns count value) */
+  if (at->scope) {
+    scope_t s = at->scope;
+    at->scope = NULL;
+    scope_dispose(s);
+  }
 }
 
 static void _array_type_move(void *self, allocator_t allocator, void *another) {
@@ -123,32 +144,47 @@ class_t g_array_type_class = {
     .name    = "cubec.engine.array_type",
     .init    = (class_init_fn_t)_array_type_init,
     .dispose = (class_dispose_fn_t)_array_type_dispose,
-    .clone   = NULL, /* types are global singletons — alloc_clone aborts */
+    .clone   = NULL, /* types are global singletons — use vtable.type_clone */
     .move    = (class_move_fn_t)_array_type_move,
 };
 
 /* ---- Type creation ---- */
 
-array_type_t array_type_create(allocator_t allocator, type_t element_type,
-                                uint64_t count, bool mut) {
-  if (count == 0)
-    return NULL; /* zero-length arrays are not semantically valid */
+array_type_t array_type_create(vm_t vm, type_t element_type,
+                                value_t count, bool mut) {
+  allocator_t allocator = vm_get_allocator(vm);
+  bool is_wildcard = (type_get_kind(value_get_type(count)) == TYPE_KIND_WILDCARD);
+
+  /* generate name */
   const char *elem_name = type_get_name(element_type);
   size_t name_len;
   char *name;
-  if (count == WILDCARD_COUNT) {
+  if (is_wildcard) {
     name_len = snprintf(NULL, 0, "[?]%s", elem_name);
     name = (char *)allocator_alloc(allocator, name_len + 1);
     snprintf(name, name_len + 1, "[?]%s", elem_name);
   } else {
+    uint64_t count_val = 0;
+    type_kind_t ck = type_get_kind(value_get_type(count));
+    if (ck >= TYPE_KIND_I8 && ck <= TYPE_KIND_U64) {
+      memcpy(&count_val, value_get_data(count), (size_t)type_get_size(value_get_type(count)));
+    }
     name_len = snprintf(NULL, 0, "[%llu]%s",
-                               (unsigned long long)count, elem_name);
+                               (unsigned long long)count_val, elem_name);
     name = (char *)allocator_alloc(allocator, name_len + 1);
     snprintf(name, name_len + 1, "[%llu]%s",
-             (unsigned long long)count, elem_name);
+             (unsigned long long)count_val, elem_name);
   }
 
-  uint64_t arr_size = (count == WILDCARD_COUNT) ? 0 : count * type_get_size(element_type);
+  uint64_t arr_size = 0;
+  if (!is_wildcard) {
+    uint64_t count_val = 0;
+    type_kind_t ck = type_get_kind(value_get_type(count));
+    if (ck >= TYPE_KIND_I8 && ck <= TYPE_KIND_U64) {
+      memcpy(&count_val, value_get_data(count), (size_t)type_get_size(value_get_type(count)));
+    }
+    arr_size = count_val * type_get_size(element_type);
+  }
   array_type_init_t init = {
       .kind         = TYPE_KIND_ARRAY,
       .name         = name,
@@ -157,19 +193,46 @@ array_type_t array_type_create(allocator_t allocator, type_t element_type,
       .mut          = mut,
       .vtable       = _make_array_vtable(),
       .element_type = element_type,
-      .count        = count,
+      .count        = NULL, /* set below after scope creation */
   };
 
   array_type_t at = (array_type_t)allocator_create(
       allocator, &g_array_type_class, &init);
   allocator_free(allocator, (void **)&name);
+
+  /* create isolated scope and register count value */
+  at->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+  scope_t prev = vm_set_scope(vm, at->scope);
+  at->count = value_clone(vm, count);
+  vm_set_scope(vm, prev);
+
   return at;
 }
 
 /* ---- Accessors ---- */
 
 type_t   array_type_get_element_type(array_type_t self) { return self->element_type; }
-uint64_t array_type_get_count(array_type_t self) { return self->count; }
+value_t  array_type_get_count(array_type_t self) { return self->count; }
+
+uint64_t array_type_get_count_value(array_type_t self) {
+  if (!self->count)
+    return 0;
+  type_t ct = value_get_type(self->count);
+  type_kind_t kind = type_get_kind(ct);
+  if (kind == TYPE_KIND_WILDCARD)
+    return 0;
+  /* integer types: extract value based on size */
+  if (kind >= TYPE_KIND_I8 && kind <= TYPE_KIND_U64) {
+    uint64_t val = 0;
+    memcpy(&val, value_get_data(self->count), (size_t)type_get_size(ct));
+    return val;
+  }
+  return 0; /* generic_param or other — not yet resolved */
+}
+
+bool array_type_is_count_wildcard(array_type_t self) {
+  return self->count && type_get_kind(value_get_type(self->count)) == TYPE_KIND_WILDCARD;
+}
 
 /* ---- Helper: create a temporary element value from array buffer ---- */
 
@@ -195,7 +258,8 @@ static vec_t _array_spread(vm_t vm, value_t self) {
   allocator_t allocator = vm_get_allocator(vm);
   vec_init_t vi = {.auto_dispose = false};
   vec_t result = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
-  for (uint64_t i = 0; i < at->count; i++) {
+  uint64_t count = array_type_get_count_value(at);
+  for (uint64_t i = 0; i < count; i++) {
     value_t elem = _make_elem_value(vm, at, self, i);
     vec_push(result, elem);
   }
@@ -233,19 +297,23 @@ static value_t _array_clone(vm_t vm, value_t self) {
 
 static value_t _array_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
+  if (tb->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
   if (tb->kind != TYPE_KIND_ARRAY)
     return create_exception_value(vm, "cannot compare array with different kind");
   array_type_t at = (array_type_t)value_get_type(a);
   array_type_t bt = (array_type_t)tb;
-  if (at->count != bt->count || type_get_kind(at->element_type) != type_get_kind(bt->element_type))
+  uint64_t ac = array_type_get_count_value(at);
+  uint64_t bc = array_type_get_count_value(bt);
+  if (ac != bc || type_get_kind(at->element_type) != type_get_kind(bt->element_type))
     return create_exception_value(vm, "cannot compare array [%llu]%s with array [%llu]%s",
-                                  (unsigned long long)at->count,
+                                  (unsigned long long)ac,
                                   type_get_name(at->element_type),
-                                  (unsigned long long)bt->count,
+                                  (unsigned long long)bc,
                                   type_get_name(bt->element_type));
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
-  for (uint64_t i = 0; i < at->count; i++) {
+  for (uint64_t i = 0; i < ac; i++) {
     value_t ea = _make_elem_value(vm, at, a, i);
     value_t eb = _make_elem_value(vm, bt, b, i);
     value_t eq = value_equal(vm, ea, eb);
@@ -268,7 +336,13 @@ static value_t _array_type_equal(vm_t vm, type_t a, type_t b) {
     return create_bool_value(vm, false);
   array_type_t aa = (array_type_t)a;
   array_type_t ab = (array_type_t)b;
-  if (aa->count != ab->count && ab->count != WILDCARD_COUNT)
+  /* count comparison via value_equal — wildcard count on right matches anything */
+  value_t count_eq = value_equal(vm, aa->count, ab->count);
+  if (value_is_abnormal(count_eq))
+    return create_bool_value(vm, false);
+  if (value_is_shadow(count_eq))
+    return create_bool_value(vm, true); /* shadow = type-level match */
+  if (!(*(bool *)value_get_data(count_eq)))
     return create_bool_value(vm, false);
   /* delegate to element type's type_equal */
   vtable_t elem_vt = type_get_vtable(aa->element_type);
@@ -287,8 +361,14 @@ static value_t _array_type_extends(vm_t vm, type_t sub, type_t super) {
     return create_bool_value(vm, false);
   array_type_t sub_at = (array_type_t)sub;
   array_type_t super_at = (array_type_t)super;
-  if (sub_at->count != super_at->count && super_at->count != WILDCARD_COUNT)
-    return create_bool_value(vm, false);
+  /* count comparison via value_equal — wildcard count in super matches anything */
+  if (!array_type_is_count_wildcard(super_at)) {
+    value_t count_eq = value_equal(vm, sub_at->count, super_at->count);
+    if (value_is_abnormal(count_eq) || value_is_shadow(count_eq))
+      return create_bool_value(vm, false);
+    if (!(*(bool *)value_get_data(count_eq)))
+      return create_bool_value(vm, false);
+  }
   vtable_t elem_vt = type_get_vtable(sub_at->element_type);
   if (elem_vt.type_extends)
     return elem_vt.type_extends(vm, sub_at->element_type, super_at->element_type);
@@ -305,7 +385,9 @@ static value_t _array_safe_cast(vm_t vm, value_t self, type_t to) {
     return self;
   array_type_t from_at = (array_type_t)from;
   array_type_t to_at = (array_type_t)to;
-  if (from_at->count != to_at->count)
+  uint64_t from_count = array_type_get_count_value(from_at);
+  uint64_t to_count = array_type_get_count_value(to_at);
+  if (from_count != to_count)
     return create_exception_value(vm, "cannot safe_cast array with different count");
   if (type_get_kind(from_at->element_type) != type_get_kind(to_at->element_type))
     return create_exception_value(vm, "cannot safe_cast array with different element type");
@@ -335,7 +417,9 @@ static value_t _array_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     return create_exception_value(vm, "cannot assign non-array to array");
   array_type_t lat = (array_type_t)value_get_type(lvalue);
   array_type_t rat = (array_type_t)rt;
-  if (lat->count != rat->count || type_get_kind(lat->element_type) != type_get_kind(rat->element_type))
+  uint64_t lc = array_type_get_count_value(lat);
+  uint64_t rc = array_type_get_count_value(rat);
+  if (lc != rc || type_get_kind(lat->element_type) != type_get_kind(rat->element_type))
     return create_exception_value(vm, "cannot assign array with different shape");
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
@@ -352,10 +436,11 @@ static value_t _array_get_item(vm_t vm, value_t self, value_t index) {
   array_type_t at = (array_type_t)value_get_type(self);
   if (value_is_shadow(self))
     return vm_create_value_shadow(vm, at->element_type, NULL, true);
+  uint64_t count = array_type_get_count_value(at);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
-  if (i >= at->count)
+  if (i >= count)
     return create_exception_value(vm, "array index %llu out of bounds (size %llu)",
-                              (unsigned long long)i, (unsigned long long)at->count);
+                              (unsigned long long)i, (unsigned long long)count);
   return _make_elem_value(vm, at, self, i);
 }
 
@@ -367,10 +452,11 @@ static value_t _array_set_item(vm_t vm, value_t self, value_t index, value_t val
     value_set_initialized(self, true);
     return create_void_value(vm);
   }
+  uint64_t count = array_type_get_count_value(at);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
-  if (i >= at->count)
+  if (i >= count)
     return create_exception_value(vm, "array index %llu out of bounds (size %llu)",
-                              (unsigned long long)i, (unsigned long long)at->count);
+                              (unsigned long long)i, (unsigned long long)count);
   type_t elem_type = at->element_type;
   uint64_t elem_size = type_get_size(elem_type);
   memcpy((char *)value_get_data(self) + i * elem_size,
@@ -387,7 +473,8 @@ static value_t _array_to_string(vm_t vm, value_t self) {
   allocator_t alloc = vm_get_allocator(vm);
   string_t result = (string_t)allocator_create(alloc, &g_string_class, NULL);
   string_concat(result, "[");
-  for (uint64_t i = 0; i < at->count; i++) {
+  uint64_t count = array_type_get_count_value(at);
+  for (uint64_t i = 0; i < count; i++) {
     if (i > 0) string_concat(result, ", ");
     value_t idx = create_i32_value(vm, (int32_t)i);
     value_t elem = _array_get_item(vm, self, idx);
@@ -413,11 +500,12 @@ static value_t _array_to_string(vm_t vm, value_t self) {
 static value_t _array_slice(vm_t vm, value_t self, uint64_t start,
                              uint64_t count) {
   array_type_t at = (array_type_t)value_get_type(self);
-  if (start + count > at->count)
+  uint64_t at_count = array_type_get_count_value(at);
+  if (start + count > at_count)
     return create_exception_value(vm,
         "array slice [%llu..%llu) out of bounds (size %llu)",
         (unsigned long long)start, (unsigned long long)(start + count),
-        (unsigned long long)at->count);
+        (unsigned long long)at_count);
   if (value_is_shadow(self))
     return vm_create_value_shadow(vm, value_get_type(self), NULL, true);
   /* create slice type and value */
@@ -434,12 +522,13 @@ value_t create_array_value(vm_t vm, array_type_t at, value_t *elements) {
   type_t elem_type = at->element_type;
   uint64_t elem_size = type_get_size(elem_type);
   uint64_t total_size = at->base.size;
+  uint64_t count = array_type_get_count_value(at);
 
   void *data = NULL;
   if (total_size > 0) {
     data = allocator_alloc(alloc, total_size);
     memset(data, 0, total_size);
-    for (uint64_t i = 0; i < at->count; i++) {
+    for (uint64_t i = 0; i < count; i++) {
       if (elements[i] && value_get_data(elements[i])) {
         memcpy((char *)data + i * elem_size,
                value_get_data(elements[i]), elem_size);

@@ -195,7 +195,7 @@ TEST_F(it_generic_type, type_alias_instantiate_array) {
   type_t result_type = (type_t)value_get_data(result);
   EXPECT_EQ(type_get_kind(result_type), TYPE_KIND_ARRAY);
   array_type_t at = (array_type_t)result_type;
-  EXPECT_EQ(array_type_get_count(at), 4u);
+  EXPECT_EQ(array_type_get_count_value(at), 4u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at)), TYPE_KIND_I32);
 }
 
@@ -254,11 +254,11 @@ TEST_F(it_generic_type, type_alias_cache_miss) {
 
   /* verify result1 is [4]i32 */
   type_t t1 = (type_t)value_get_data(result1);
-  EXPECT_EQ(array_type_get_count((array_type_t)t1), 4u);
+  EXPECT_EQ(array_type_get_count_value((array_type_t)t1), 4u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type((array_type_t)t1)), TYPE_KIND_I32);
 
   /* verify result2 is [8]i64 */
   type_t t2 = (type_t)value_get_data(result2);
-  EXPECT_EQ(array_type_get_count((array_type_t)t2), 8u);
+  EXPECT_EQ(array_type_get_count_value((array_type_t)t2), 8u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type((array_type_t)t2)), TYPE_KIND_I64);
 }

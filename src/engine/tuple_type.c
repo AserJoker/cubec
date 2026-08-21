@@ -289,6 +289,8 @@ static value_t _tuple_clone(vm_t vm, value_t self) {
 
 static value_t _tuple_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
+  if (tb->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
   if (tb->kind != TYPE_KIND_TUPLE)
     return create_exception_value(vm, "cannot compare tuple with different kind");
   tuple_type_t ta = (tuple_type_t)value_get_type(a);
@@ -391,12 +393,12 @@ static value_t _tuple_safe_cast_to_array(vm_t vm, value_t self,
   type_t to = (type_t)to_at;
 
   /* validation before shortcut: count must match */
-  if (from_tt->field_count != to_at->count)
+  if (from_tt->field_count != array_type_get_count_value(to_at))
     return create_exception_value(vm,
                                   "cannot safe_cast tuple to '%s': field count %llu != array count %llu",
                                   to->name,
                                   (unsigned long long)from_tt->field_count,
-                                  (unsigned long long)to_at->count);
+                                  (unsigned long long)array_type_get_count_value(to_at));
 
   /* const tuple → mut array is not allowed */
   if (!from->mut && to->mut)
@@ -410,7 +412,7 @@ static value_t _tuple_safe_cast_to_array(vm_t vm, value_t self,
 
   /* extract each tuple element and safe_cast to array's element type */
   allocator_t alloc = vm_get_allocator(vm);
-  uint64_t count = to_at->count;
+  uint64_t count = array_type_get_count_value(to_at);
   value_t *elems = NULL;
   if (count > 0) {
     elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));

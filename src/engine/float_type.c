@@ -162,6 +162,8 @@ static type_t _float_promote(vm_t vm, value_t a, value_t b,
                                                                                \
 static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
   type_t tb = value_get_type(b);                                               \
+  if (tb->kind == TYPE_KIND_WILDCARD)                                          \
+    return create_bool_value(vm, true);                                        \
   if (!_is_float_kind(tb->kind))                                               \
     return create_exception_value(vm, "cannot compare values of different kinds");  \
   value_t pa, pb;                                                              \

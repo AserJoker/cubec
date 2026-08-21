@@ -258,6 +258,10 @@ static value_t _pointer_clone(vm_t vm, value_t self) {
 static value_t _pointer_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
 
+  /* wildcard on right matches anything */
+  if (type_get_kind(tb) == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
+
   /* pointer == nil: true if pointer holds NULL address */
   if (type_get_kind(tb) == TYPE_KIND_NIL) {
     if (value_is_shadow(a) || value_is_shadow(b))

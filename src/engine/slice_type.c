@@ -205,6 +205,8 @@ static value_t _slice_clone(vm_t vm, value_t self) {
 
 static value_t _slice_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
+  if (tb->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
   if (tb->kind != TYPE_KIND_SLICE)
     return create_exception_value(vm, "cannot compare slice with different kind");
   slice_type_t sa = (slice_type_t)value_get_type(a);
@@ -437,7 +439,7 @@ value_t create_slice_value(vm_t vm, slice_type_t st,
   array_type_t at = (array_type_t)arr_type;
   if (type_get_kind(at->element_type) != type_get_kind(st->element_type))
     return create_exception_value(vm, "slice element type does not match array");
-  if (start_elem + count > at->count)
+  if (start_elem + count > array_type_get_count_value(at))
     return create_exception_value(vm, "slice range out of bounds");
 
   struct slice_data_t *sd = (struct slice_data_t *)allocator_alloc(

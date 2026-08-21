@@ -566,6 +566,8 @@ static value_t _struct_clone(vm_t vm, value_t self) {
 
 static value_t _struct_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
+  if (type_get_kind(tb) == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
   if (type_get_kind(tb) != TYPE_KIND_STRUCT)
     return create_exception_value(vm, "cannot compare struct with '%s'",
                                   type_get_name(tb));

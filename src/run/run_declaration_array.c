@@ -22,8 +22,6 @@ value_t run_declaration_array(vm_t vm, node_t node, bool shadow) {
       size_kind != TYPE_KIND_I32 && size_kind != TYPE_KIND_I64)
     return create_exception_value(vm, "array size must be an integer, got '%s'",
                                   type_get_name(value_get_type(size_val)));
-  uint64_t count = 0;
-  memcpy(&count, value_get_data(size_val), (size_t)type_get_size(value_get_type(size_val)));
 
   /* evaluate element type expression */
   value_t elem_type_val = run_expression(vm, arr->type, false);
@@ -35,5 +33,5 @@ value_t run_declaration_array(vm_t vm, node_t node, bool shadow) {
                                   type_get_name(value_get_type(elem_type_val)));
   type_t elem_type = (type_t)value_get_data(elem_type_val);
 
-  return vm_create_array_type_value(vm, elem_type, count, true);
+  return vm_create_array_type_value(vm, elem_type, size_val, true);
 }

@@ -1,4 +1,4 @@
-﻿#include "engine/vm.h"
+#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -71,7 +71,7 @@ TEST_F(it_error_struct, message_is_128_u8_array) {
 
   field_info_t f0 = (field_info_t)vec_get(fields, 0);
   array_type_t at = (array_type_t)field_info_get_type(f0);
-  EXPECT_EQ(array_type_get_count(at), 128u);
+  EXPECT_EQ(array_type_get_count_value(at), 128u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at)), TYPE_KIND_U8);
 
   vm_dispose(vm, allocator);
@@ -85,7 +85,7 @@ TEST_F(it_error_struct, backtrace_is_32_u64_array) {
 
   field_info_t f2 = (field_info_t)vec_get(fields, 2);
   array_type_t at = (array_type_t)field_info_get_type(f2);
-  EXPECT_EQ(array_type_get_count(at), 32u);
+  EXPECT_EQ(array_type_get_count_value(at), 32u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at)), TYPE_KIND_U64);
 
   vm_dispose(vm, allocator);

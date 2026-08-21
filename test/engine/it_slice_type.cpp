@@ -30,7 +30,8 @@ protected:
 
   /* create array type via vm 鈥?registered in scope, no leak */
   array_type_t _make_i32_array_type(vm_t vm, uint64_t count) {
-    value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), count, true);
+    value_t cv = create_i32_value(vm, (int32_t)count);
+    value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), cv, true);
     return (array_type_t)value_get_data(tv);
   }
 

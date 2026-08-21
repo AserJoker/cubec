@@ -29,12 +29,14 @@ protected:
 
   /* create array type via vm 鈥?registered in scope, no leak */
   array_type_t _make_i32_array_type(vm_t vm, uint64_t count) {
-    value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), count, true);
+    value_t cv = create_i32_value(vm, (int32_t)count);
+    value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), cv, true);
     return (array_type_t)value_get_data(tv);
   }
 
   array_type_t _make_const_i32_array_type(vm_t vm, uint64_t count) {
-    value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), count, false);
+    value_t cv = create_i32_value(vm, (int32_t)count);
+    value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), cv, false);
     return (array_type_t)value_get_data(tv);
   }
 };
@@ -52,7 +54,7 @@ TEST_F(it_array_type, create_type) {
   EXPECT_EQ(type_get_align((type_t)at), 4u);
   EXPECT_TRUE(type_is_mut((type_t)at));
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at)), type_get_kind(i32t));
-  EXPECT_EQ(array_type_get_count(at), 3u);
+  EXPECT_EQ(array_type_get_count_value(at), 3u);
 
   vm_dispose(vm, allocator);
 }
@@ -62,7 +64,7 @@ TEST_F(it_array_type, create_const_type) {
   array_type_t at = _make_const_i32_array_type(vm, 5);
 
   EXPECT_FALSE(type_is_mut((type_t)at));
-  EXPECT_EQ(array_type_get_count(at), 5u);
+  EXPECT_EQ(array_type_get_count_value(at), 5u);
 
   vm_dispose(vm, allocator);
 }
@@ -307,11 +309,11 @@ TEST_F(it_array_type, type_extends_wildcard) {
 
 TEST_F(it_array_type, wildcard_count_name) {
   vm_t vm = vm_create(allocator);
-  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), WILDCARD_COUNT, true);
+  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), vm_get_wildcard_value(vm), true);
   array_type_t at = (array_type_t)value_get_data(tv);
 
   EXPECT_STREQ(type_get_name((type_t)at), "[?]i32");
-  EXPECT_EQ(array_type_get_count(at), WILDCARD_COUNT);
+  EXPECT_TRUE(array_type_is_count_wildcard(at));
   EXPECT_EQ(type_get_size((type_t)at), 0u); /* unknown size */
 
   vm_dispose(vm, allocator);
@@ -320,7 +322,7 @@ TEST_F(it_array_type, wildcard_count_name) {
 TEST_F(it_array_type, wildcard_count_type_equal) {
   vm_t vm = vm_create(allocator);
   array_type_t concrete = _make_i32_array_type(vm, 10);
-  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), WILDCARD_COUNT, true);
+  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), vm_get_wildcard_value(vm), true);
   array_type_t wc_at = (array_type_t)value_get_data(tv);
 
   /* [10]i32 equal [?]i32 鈫?true (wildcard count skips comparison) */
@@ -339,7 +341,7 @@ TEST_F(it_array_type, wildcard_count_type_equal) {
 TEST_F(it_array_type, wildcard_count_type_extends) {
   vm_t vm = vm_create(allocator);
   array_type_t concrete = _make_i32_array_type(vm, 10);
-  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), WILDCARD_COUNT, true);
+  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), vm_get_wildcard_value(vm), true);
   array_type_t wc_at = (array_type_t)value_get_data(tv);
 
   /* [10]i32 extends [?]i32 鈫?true */
@@ -353,7 +355,7 @@ TEST_F(it_array_type, wildcard_count_type_extends) {
 TEST_F(it_array_type, wildcard_count_different_element) {
   vm_t vm = vm_create(allocator);
   array_type_t i32_arr = _make_i32_array_type(vm, 10);
-  value_t tv = vm_create_array_type_value(vm, _get_bool_type(vm), WILDCARD_COUNT, true);
+  value_t tv = vm_create_array_type_value(vm, _get_bool_type(vm), vm_get_wildcard_value(vm), true);
   array_type_t wc_bool = (array_type_t)value_get_data(tv);
 
   /* [10]i32 extends [?]bool 鈫?false (element type mismatch) */
@@ -529,12 +531,12 @@ TEST_F(it_array_type, vm_create_array_type_value_registers_in_scope) {
   scope_t scope = vm_get_current_scope(vm);
   size_t types_before = vec_get_size(vm_get_types(vm));
 
-  value_t tv = vm_create_array_type_value(vm, i32t, 4, true);
+  value_t tv = vm_create_array_type_value(vm, i32t, create_i32_value(vm, 4), true);
   EXPECT_NE(tv, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(tv)), TYPE_KIND_TYPE);
 
   array_type_t at = (array_type_t)value_get_data(tv);
-  EXPECT_EQ(array_type_get_count(at), 4u);
+  EXPECT_EQ(array_type_get_count_value(at), 4u);
 
   /* registered in vm->types */
   EXPECT_EQ(vec_get_size(vm_get_types(vm)), types_before + 1);
@@ -548,7 +550,7 @@ TEST_F(it_array_type, type_clone_same_scope) {
   vm_t vm = vm_create(allocator);
   type_t i32t = _get_i32_type(vm);
 
-  value_t tv = vm_create_array_type_value(vm, i32t, 3, true);
+  value_t tv = vm_create_array_type_value(vm, i32t, create_i32_value(vm, 3), true);
   array_type_t at = (array_type_t)value_get_data(tv);
 
   /* type_clone in same scope returns same pointer (already in scope) */
@@ -565,7 +567,7 @@ TEST_F(it_array_type, type_clone_cross_scope) {
   type_t i32t = _get_i32_type(vm);
 
   /* create array type in outer scope */
-  value_t tv = vm_create_array_type_value(vm, i32t, 3, true);
+  value_t tv = vm_create_array_type_value(vm, i32t, create_i32_value(vm, 3), true);
   array_type_t outer_at = (array_type_t)value_get_data(tv);
 
   /* switch to inner scope */
@@ -578,7 +580,7 @@ TEST_F(it_array_type, type_clone_cross_scope) {
   array_type_t inner_at = (array_type_t)inner_type;
   EXPECT_EQ(inner_type, (type_t)outer_at);
   EXPECT_EQ(type_get_kind(inner_type), TYPE_KIND_ARRAY);
-  EXPECT_EQ(array_type_get_count(inner_at), 3u);
+  EXPECT_EQ(array_type_get_count_value(inner_at), 3u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type(inner_at)), TYPE_KIND_I32);
 
   vm_set_scope(vm, prev);
@@ -594,10 +596,10 @@ TEST_F(it_array_type, nested_array_cross_scope_clone) {
   type_t i32t = _get_i32_type(vm);
 
   /* create [2][3]i32 in outer scope */
-  value_t inner_tv = vm_create_array_type_value(vm, i32t, 3, true);
+  value_t inner_tv = vm_create_array_type_value(vm, i32t, create_i32_value(vm, 3), true);
   array_type_t inner_at = (array_type_t)value_get_data(inner_tv);
 
-  value_t outer_tv = vm_create_array_type_value(vm, (type_t)inner_at, 2, true);
+  value_t outer_tv = vm_create_array_type_value(vm, (type_t)inner_at, create_i32_value(vm, 2), true);
   array_type_t outer_at = (array_type_t)value_get_data(outer_tv);
 
   /* create [2][3]i32 value: [[1,2,3],[4,5,6]] */
@@ -620,11 +622,11 @@ TEST_F(it_array_type, nested_array_cross_scope_clone) {
   EXPECT_EQ(type_get_kind(value_get_type(cloned)), TYPE_KIND_ARRAY);
 
   array_type_t cloned_outer = (array_type_t)value_get_type(cloned);
-  EXPECT_EQ(array_type_get_count(cloned_outer), 2u);
+  EXPECT_EQ(array_type_get_count_value(cloned_outer), 2u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type(cloned_outer)), TYPE_KIND_ARRAY);
 
   array_type_t cloned_inner = (array_type_t)array_type_get_element_type(cloned_outer);
-  EXPECT_EQ(array_type_get_count(cloned_inner), 3u);
+  EXPECT_EQ(array_type_get_count_value(cloned_inner), 3u);
 
   /* verify data: get cloned[0][1] should be 2 */
   value_t idx0 = create_i32_value(vm, 0);
@@ -645,7 +647,7 @@ TEST_F(it_array_type, nested_array_cross_scope_clone) {
 TEST_F(it_array_type, vm_create_array_type_value_count0_returns_exception) {
   vm_t vm = vm_create(allocator);
   type_t i32t = _get_i32_type(vm);
-  value_t tv = vm_create_array_type_value(vm, i32t, 0, true);
+  value_t tv = vm_create_array_type_value(vm, i32t, create_i32_value(vm, 0), true);
   EXPECT_EQ(type_get_kind(value_get_type(tv)), TYPE_KIND_EXCEPTION);
   vm_dispose(vm, allocator);
 }

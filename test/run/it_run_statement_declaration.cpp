@@ -341,7 +341,7 @@ TEST_F(it_run_statement_declaration, type_alias_generic_value_param) {
   EXPECT_EQ(type_get_kind(arr_type), TYPE_KIND_ARRAY);
   /* verify the array is [4]i32 */
   array_type_t at = (array_type_t)arr_type;
-  EXPECT_EQ(array_type_get_count(at), 4u);
+  EXPECT_EQ(array_type_get_count_value(at), 4u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at)), TYPE_KIND_I32);
 }
 
@@ -359,9 +359,9 @@ TEST_F(it_run_statement_declaration, type_alias_generic_value_param_different_ar
   array_type_t at1 = (array_type_t)value_get_data(n1->ref);
   array_type_t at2 = (array_type_t)value_get_data(n2->ref);
 
-  EXPECT_EQ(array_type_get_count(at1), 3u);
+  EXPECT_EQ(array_type_get_count_value(at1), 3u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at1)), TYPE_KIND_I32);
-  EXPECT_EQ(array_type_get_count(at2), 5u);
+  EXPECT_EQ(array_type_get_count_value(at2), 5u);
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at2)), TYPE_KIND_I64);
 }
 

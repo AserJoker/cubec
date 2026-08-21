@@ -23,6 +23,10 @@ static value_t _nil_clone(vm_t vm, value_t self) {
 static value_t _nil_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
 
+  /* wildcard on right matches anything */
+  if (tb->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
+
   /* nil == nil */
   if (tb->kind == TYPE_KIND_NIL) {
     if (value_is_shadow(a) || value_is_shadow(b))

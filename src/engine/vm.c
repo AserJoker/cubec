@@ -333,8 +333,9 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   /* message: [128]u8 */
   type_t err_u8_type = (type_t)value_get_data(vm->v_u8);
+  value_t count_128 = create_i32_value(self, 128);
   type_t msg_array_type =
-      (type_t)array_type_create(allocator, err_u8_type, 128, true);
+      (type_t)array_type_create(self, err_u8_type, count_128, true);
   vec_push(vm->types, msg_array_type); /* register in vm->types for lifecycle */
   {
     value_t tmp = value_create(allocator, type_type_val, msg_array_type, false);
@@ -351,8 +352,9 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   }
 
   /* backtrace: [32]u64 */
+  value_t count_32 = create_i32_value(self, 32);
   type_t bt_array_type =
-      (type_t)array_type_create(allocator, err_u64_type, 32, true);
+      (type_t)array_type_create(self, err_u64_type, count_32, true);
   vec_push(vm->types, bt_array_type); /* register in vm->types for lifecycle */
   {
     value_t tmp = value_create(allocator, type_type_val, bt_array_type, false);
@@ -828,11 +830,19 @@ value_t vm_create_value_shadow(vm_t self, type_t type, const char *name,
 }
 
 value_t vm_create_array_type_value(vm_t self, type_t element_type,
-                                   uint64_t count, bool mut) {
+                                   value_t count, bool mut) {
+  /* reject zero-length arrays (wildcard count is allowed) */
+  type_kind_t ck = type_get_kind(value_get_type(count));
+  if (ck != TYPE_KIND_WILDCARD) {
+    if (ck >= TYPE_KIND_I8 && ck <= TYPE_KIND_U64) {
+      uint64_t cv = 0;
+      memcpy(&cv, value_get_data(count), (size_t)type_get_size(value_get_type(count)));
+      if (cv == 0)
+        return create_exception_value(self, "zero-length array is not valid");
+    }
+  }
   array_type_t at =
-      array_type_create(self->allocator, element_type, count, mut);
-  if (!at)
-    return create_exception_value(self, "zero-length array is not valid");
+      array_type_create(self, element_type, count, mut);
   /* register array_type_t in vm->types for auto-dispose */
   vec_push(vm_get_types(self), at);
   /* wrap as a type value — own=false because vm->types owns the type_t */

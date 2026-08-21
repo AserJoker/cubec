@@ -83,13 +83,13 @@ protected:
   /* create a [3]i32 array type for tuple→array cast tests */
   array_type_t _make_i32x3_array_type(vm_t vm) {
     type_t i32_t = _get_i32_type(vm);
-    value_t tv = vm_create_array_type_value(vm, i32_t, 3, true);
+    value_t tv = vm_create_array_type_value(vm, i32_t, create_i32_value(vm, 3), true);
     return (array_type_t)value_get_data(tv);
   }
 
   array_type_t _make_const_i32x3_array_type(vm_t vm) {
     type_t i32_t = _get_i32_type(vm);
-    value_t tv = vm_create_array_type_value(vm, i32_t, 3, false);
+    value_t tv = vm_create_array_type_value(vm, i32_t, create_i32_value(vm, 3), false);
     return (array_type_t)value_get_data(tv);
   }
 };
@@ -560,7 +560,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_homogeneous) {
   value_t cast = value_safe_cast(vm, tup, (type_t)at);
   ASSERT_FALSE(value_is_abnormal(cast));
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
-  EXPECT_EQ(array_type_get_count((array_type_t)value_get_type(cast)), 3u);
+  EXPECT_EQ(array_type_get_count_value((array_type_t)value_get_type(cast)), 3u);
 
   /* verify each element was preserved */
   for (uint64_t i = 0; i < 3; i++) {
@@ -618,7 +618,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_count_mismatch_error) {
   tuple_type_t tt = _make_i32x3_tuple_type(vm);
   /* [2]i32 array — count mismatch with 3-element tuple */
   type_t i32_t = _get_i32_type(vm);
-  value_t atv = vm_create_array_type_value(vm, i32_t, 2, true);
+  value_t atv = vm_create_array_type_value(vm, i32_t, create_i32_value(vm, 2), true);
   array_type_t at = (array_type_t)value_get_data(atv);
 
   int32_t a = 1, b = 2, c = 3;
@@ -640,7 +640,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_incompatible_element_error) {
   /* <i32, f64> tuple vs [2]i32 array — element types incompatible */
   tuple_type_t tt = _make_i32_f64_tuple_type(vm);
   type_t i32_t = _get_i32_type(vm);
-  value_t atv = vm_create_array_type_value(vm, i32_t, 2, true);
+  value_t atv = vm_create_array_type_value(vm, i32_t, create_i32_value(vm, 2), true);
   array_type_t at = (array_type_t)value_get_data(atv);
 
   int32_t i = 1;
@@ -670,7 +670,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_widening_element) {
   tuple_type_t tt = (tuple_type_t)value_get_data(ttv);
 
   type_t i64_t = (type_t)value_get_data(vm_get_i64_type(vm));
-  value_t atv = vm_create_array_type_value(vm, i64_t, 2, true);
+  value_t atv = vm_create_array_type_value(vm, i64_t, create_i32_value(vm, 2), true);
   array_type_t at = (array_type_t)value_get_data(atv);
 
   int32_t a = 42, b = 99;

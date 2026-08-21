@@ -139,6 +139,8 @@ static value_t _int_clone(vm_t vm, value_t self) {
                                                                                \
 static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
   type_t tb = value_get_type(b);                                               \
+  if (tb->kind == TYPE_KIND_WILDCARD)                                          \
+    return create_bool_value(vm, true);                                        \
   if (!_is_integer_kind(tb->kind))                                             \
     return create_exception_value(vm, "cannot compare values of different kinds");  \
   value_t pa, pb;                                                              \
@@ -223,6 +225,8 @@ DEFINE_SINT_VTABLE(i64, int64_t, TYPE_KIND_I64, 8, 8, "i64")
                                                                                \
 static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
   type_t tb = value_get_type(b);                                               \
+  if (tb->kind == TYPE_KIND_WILDCARD)                                          \
+    return create_bool_value(vm, true);                                        \
   if (!_is_integer_kind(tb->kind))                                             \
     return create_exception_value(vm, "cannot compare values of different kinds");  \
   value_t pa, pb;                                                              \
@@ -245,7 +249,7 @@ static value_t _##Prefix##_type_extends(vm_t vm, type_t sub, type_t super) {  \
   if (super->kind == TYPE_KIND_WILDCARD)                                       \
     return create_bool_value(vm, true);                                        \
   return create_bool_value(vm, super->kind == KIND);                          \
-}                                                                              \
+}                                                                               \
                                                                                \
 static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
   if (!_is_integer_kind(to->kind))                                             \

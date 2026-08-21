@@ -209,7 +209,7 @@ static value_t _build_typed_tuple(vm_t vm, tuple_type_t tt,
 static value_t _build_typed_array(vm_t vm, array_type_t at,
                                   cubec_expression_initialize_list_t node,
                                   bool shadow) {
-  uint64_t array_count = array_type_get_count(at);
+  uint64_t array_count = array_type_get_count_value(at);
   allocator_t alloc = vm_get_allocator(vm);
 
   /* expand spread nodes to get actual element count */

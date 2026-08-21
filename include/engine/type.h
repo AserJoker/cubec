@@ -18,8 +18,6 @@ typedef struct _value_t *value_t;
 /**
  * @brief Type kind — distinguishes value categories.
  */
-/** @brief Sentinel value for wildcard count in array types: [?]T. */
-#define WILDCARD_COUNT UINT64_MAX
 
 typedef enum type_kind_t {
   TYPE_KIND_TYPE,

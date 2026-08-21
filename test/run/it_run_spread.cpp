@@ -108,7 +108,7 @@ protected:
 
   value_t _make_i32_array3(vm_t vm, int32_t a, int32_t b, int32_t c) {
     array_type_t at = (array_type_t)value_get_data(
-        vm_create_array_type_value(vm, _i32(vm), 3, true));
+        vm_create_array_type_value(vm, _i32(vm), create_i32_value(vm, 3), true));
     value_t elems[] = {
         vm_create_value(vm, _i32(vm), &a, NULL),
         vm_create_value(vm, _i32(vm), &b, NULL),

@@ -58,6 +58,8 @@ static value_t _str_clone(vm_t vm, value_t self) {
 
 static value_t _str_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
+  if (tb->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
   if (tb->kind != TYPE_KIND_STR)
     return create_exception_value(vm, "cannot compare str with different kind");
   if (value_is_shadow(a) || value_is_shadow(b))
