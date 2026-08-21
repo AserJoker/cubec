@@ -9,6 +9,7 @@
 #include "engine/pointer_type.h"
 #include "engine/str_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "core/string.h"
 #include "core/vec.h"
 #include <stdbool.h>
@@ -88,6 +89,7 @@ static vtable_t _make_cunion_vtable(void) {
       .is_instance  = NULL,
       .get_field_raw= NULL,
       .type_clone   = _cunion_type_type_clone,
+      .infer_walk   = _cunion_infer_walk,
   };
 }
 

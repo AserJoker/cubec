@@ -9,6 +9,7 @@
 #include "engine/opaque_type.h"
 #include "engine/str_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "core/string.h"
 #include <stdbool.h>
 #include <string.h>
@@ -88,6 +89,7 @@ static vtable_t _make_pointer_vtable(void) {
       .is_instance  = _pointer_is_instance,
       .get_field_raw= _pointer_get_field_raw,
       .type_clone   = _pointer_type_clone,
+      .infer_walk   = _pointer_infer_walk,
   };
 }
 

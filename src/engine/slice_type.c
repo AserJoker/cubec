@@ -9,6 +9,7 @@
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "core/string.h"
 #include <stdbool.h>
 #include <string.h>
@@ -83,6 +84,7 @@ static vtable_t _make_slice_vtable(void) {
       .get_prop     = NULL,
       .set_prop     = NULL,
       .type_clone   = _slice_type_clone,
+      .infer_walk   = _slice_infer_walk,
   };
 }
 

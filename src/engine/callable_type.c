@@ -9,6 +9,7 @@
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include <stdbool.h>
@@ -92,6 +93,7 @@ static vtable_t _make_callable_vtable(void) {
       .get_prop     = NULL,
       .set_prop     = NULL,
       .type_clone   = _callable_type_type_clone,
+      .infer_walk   = _callable_infer_walk,
   };
 }
 

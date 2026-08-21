@@ -14,6 +14,7 @@
 #include "engine/interface_type.h"
 #include "engine/result_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include "core/vec.h"
@@ -115,6 +116,7 @@ static vtable_t _make_union_vtable(void) {
       .is_instance  = _union_is_instance,
       .get_field_raw= _union_get_field_raw,
       .type_clone   = _union_type_type_clone,
+      .infer_walk   = _union_infer_walk,
   };
 }
 

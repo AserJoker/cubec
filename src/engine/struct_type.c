@@ -10,6 +10,7 @@
 #include "engine/callable_type.h"
 #include "engine/interface_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include "core/vec.h"
@@ -87,6 +88,7 @@ static vtable_t _make_struct_vtable(void) {
       .type_get_prop= _struct_type_get_prop,
       .type_set_prop= _struct_type_set_prop,
       .type_clone   = _struct_type_type_clone,
+      .infer_walk   = _struct_infer_walk,
   };
 }
 

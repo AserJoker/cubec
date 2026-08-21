@@ -5,6 +5,7 @@
 #include "engine/exception_type.h"
 #include "engine/interrupt_type.h"
 #include "engine/bool_type.h"
+#include "engine/generic_inference.h"
 #include <string.h>
 
 struct _value_t {
@@ -406,6 +407,10 @@ value_t value_slice(vm_t vm, value_t self, uint64_t start, uint64_t count) {
 }
 
 value_t value_call(vm_t vm, value_t fn, size_t argc, value_t *argv) {
+  /* Generic function: dispatch to inference path */
+  type_kind_t kind = type_get_kind(value_get_type(fn));
+  if (kind == TYPE_KIND_GENERIC_FN)
+    return generic_fn_call_with_inference(vm, fn, 0, NULL, argc, argv);
   vtable_t vt = type_get_vtable(value_get_type(fn));
   if (!vt.call)
     return create_exception_value(vm, "type '%s' is not callable",

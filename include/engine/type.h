@@ -42,6 +42,8 @@ typedef enum type_kind_t {
   /* Compile-time only */
   TYPE_KIND_GENERIC, TYPE_KIND_GENERIC_FN,
   TYPE_KIND_PACK,
+  TYPE_KIND_GENERIC_PARAM, /* placeholder type for generic inference (data=name) */
+  TYPE_KIND_GENERIC_PACK,  /* placeholder type for pack inference (data=name) */
 } type_kind_t;
 
 /**
@@ -139,6 +141,14 @@ struct vtable_t {
    * Returns an owned vec_t of value_t (auto_dispose=false, borrowed refs),
    * or NULL if the type does not support spread. */
   vec_t (*spread)(vm_t vm, value_t self);
+  /* Generic inference walk — recursively match formal type (containing placeholders)
+   * against actual type, inferring generic parameter values.
+   * Returns true on successful match/inference, false on mismatch.
+   * ctx is an opaque inference context (infer_ctx_t from generic_inference.h).
+   * Types recurse into sub-types via infer_walk_recurse() and assign inferred
+   * values via infer_walk_assign_param() / infer_walk_assign_value().
+   * NULL = type does not support structural inference (falls back to exact kind match). */
+  bool (*infer_walk)(vm_t vm, type_t formal, type_t actual, void *ctx);
 };
 typedef struct vtable_t vtable_t;
 

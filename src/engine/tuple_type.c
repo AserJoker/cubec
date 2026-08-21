@@ -8,6 +8,7 @@
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "engine/array_type.h"
 #include "core/string.h"
 #include <stdbool.h>
@@ -111,6 +112,7 @@ static vtable_t _make_tuple_vtable(void) {
       .set_prop     = NULL,
       .type_clone   = _tuple_type_clone,
       .spread       = _tuple_spread,
+      .infer_walk   = _tuple_infer_walk,
   };
 }
 

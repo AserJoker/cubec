@@ -10,6 +10,7 @@
 #include "engine/wildcard_type.h"
 #include "engine/slice_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "engine/name.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -96,6 +97,7 @@ static vtable_t _make_array_vtable(void) {
       .set_prop     = NULL,
       .type_clone   = _array_type_clone,
       .spread       = _array_spread,
+      .infer_walk   = _array_infer_walk,
   };
 }
 

@@ -7,6 +7,7 @@
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
 #include "engine/type.h"
+#include "engine/generic_inference.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include <stdbool.h>
@@ -111,6 +112,7 @@ static vtable_t _make_enum_vtable(void) {
       .is_instance  = NULL,
       .get_field_raw= NULL,
       .type_clone   = _enum_type_type_clone,
+      .infer_walk   = _enum_infer_walk,
   };
 }
 

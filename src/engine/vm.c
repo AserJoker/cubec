@@ -831,7 +831,9 @@ value_t vm_create_value_shadow(vm_t self, type_t type, const char *name,
 
 value_t vm_create_array_type_value(vm_t self, type_t element_type,
                                    value_t count, bool mut) {
-  /* reject zero-length arrays (wildcard count is allowed) */
+  /* reject zero-length arrays (wildcard count is allowed;
+   * shadow/uninitialized count values are also allowed — they represent
+   * generic param placeholders during inference) */
   type_kind_t ck = type_get_kind(value_get_type(count));
   if (ck != TYPE_KIND_WILDCARD) {
     if (ck >= TYPE_KIND_I8 && ck <= TYPE_KIND_U64) {
