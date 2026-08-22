@@ -229,7 +229,7 @@ static value_t _generic_fn_instantiate(vm_t vm, value_t self, size_t argc, value
   /* 3. Delegate to create_instance callback from value.data */
   create_instance_fn_t fn = (create_instance_fn_t)value_get_data(self);
   if (!fn)
-    return create_exception_value(vm, "generic fn '%s' has no instantiation callback",
+    return create_exception_value(vm, "generic function '%s' cannot be instantiated",
                                   type_get_name(self_type));
   return fn(vm, self, argc, argv);
 }

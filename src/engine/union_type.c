@@ -1076,7 +1076,7 @@ value_t vm_union_add_field(vm_t vm, value_t type_val,
                             const char *name, value_t field_type_val, bool pub) {
   union_type_t ut = _unwrap_union_type(vm, type_val);
   if (!ut)
-    return create_exception_value(vm, "vm_union_add_field: expected union type value");
+    return create_exception_value(vm, "expected union type value");
   type_t inner = (type_t)value_get_data(type_val);
   if (ut->sealed)
     return create_exception_value(vm, "cannot add field '%s' to sealed union type '%s'",
@@ -1092,7 +1092,7 @@ value_t vm_union_add_field(vm_t vm, value_t type_val,
 value_t vm_union_seal(vm_t vm, value_t type_val) {
   union_type_t ut = _unwrap_union_type(vm, type_val);
   if (!ut)
-    return create_exception_value(vm, "vm_union_seal: expected union type value");
+    return create_exception_value(vm, "expected union type value");
   if (!_ut_seal(ut))
     return create_exception_value(vm, "cannot seal empty union type '%s'",
                                   type_get_name((type_t)ut));
@@ -1103,7 +1103,7 @@ value_t vm_union_add_prop(vm_t vm, value_t type_val,
                            const char *name, value_t val, bool is_method, bool pub) {
   union_type_t ut = _unwrap_union_type(vm, type_val);
   if (!ut)
-    return create_exception_value(vm, "vm_union_add_prop: expected union type value");
+    return create_exception_value(vm, "expected union type value");
   if (strmap_find(ut->props, name))
     return create_exception_value(vm, "duplicate prop '%s' in union type '%s'",
                                   name, type_get_name((type_t)ut));

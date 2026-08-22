@@ -200,7 +200,7 @@ value_t vm_interface_add_method(vm_t vm, value_t type_val,
                                  const char *name, value_t callable_type_val) {
   interface_type_t it = _unwrap_interface_type(vm, type_val);
   if (!it)
-    return create_exception_value(vm, "vm_interface_add_method: expected interface type value");
+    return create_exception_value(vm, "expected interface type value");
   if (it->sealed)
     return create_exception_value(vm, "cannot add method '%s' to sealed interface '%s'",
                                   name, type_get_name((type_t)it));
@@ -215,7 +215,7 @@ value_t vm_interface_add_method(vm_t vm, value_t type_val,
 value_t vm_interface_seal(vm_t vm, value_t type_val) {
   interface_type_t it = _unwrap_interface_type(vm, type_val);
   if (!it)
-    return create_exception_value(vm, "vm_interface_seal: expected interface type value");
+    return create_exception_value(vm, "expected interface type value");
   if (!_it_seal(it))
     return create_exception_value(vm, "cannot seal empty interface '%s'",
                                   type_get_name((type_t)it));

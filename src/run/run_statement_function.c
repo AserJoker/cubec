@@ -45,7 +45,7 @@ value_t run_statement_function(vm_t vm, node_t node, bool shadow) {
       return create_void_value(vm);
     }
     return create_exception_value(vm,
-        "run: function statement requires a name");
+        "function statement requires a name");
   }
 
   const char *name = _get_name(decl->name);

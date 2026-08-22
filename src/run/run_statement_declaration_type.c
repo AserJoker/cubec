@@ -55,7 +55,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
           vm_get_builtin_template(vm, name);
       if (!callback)
         return create_exception_value(vm,
-            "run: builtin generic type '%s' not found in builtin_templates",
+            "builtin generic type '%s' not found in builtin_templates",
             name);
 
       /* build engine-level generic_param_t vec from AST */
@@ -88,7 +88,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
           if (type_get_kind(value_get_type(vt)) != TYPE_KIND_TYPE) {
             allocator_free(allocator, &params_vec);
             return create_exception_value(vm,
-                "run: builtin generic param '%s' type annotation must produce a type, got '%s'",
+                "builtin generic param '%s' type annotation must produce a type, got '%s'",
                 pname, type_get_name(value_get_type(vt)));
           }
           param_type = (type_t)value_get_data(vt);
@@ -139,7 +139,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
               allocator_free(allocator, &extends);
               allocator_free(allocator, &params_vec);
               return create_exception_value(vm,
-                  "run: builtin generic param constraint must produce a type, got '%s'",
+                  "builtin generic param constraint must produce a type, got '%s'",
                   type_get_name(value_get_type(cv)));
             }
             type_t constraint_type = (type_t)value_get_data(cv);
@@ -171,7 +171,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
     name_t builtin_name = scope_lookup(global_scope, name);
     if (!builtin_name || !builtin_name->ref)
       return create_exception_value(vm,
-                                    "run: builtin type '%s' not found", name);
+                                    "builtin type '%s' not found", name);
     value_t builtin_val = builtin_name->ref;
 
     /* if type_value is provided, verify it matches the builtin */
@@ -204,7 +204,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
       bool equal = *(bool *)value_get_data(eq);
       if (!equal)
         return create_exception_value(vm,
-                                      "run: builtin type '%s' declaration mismatches",
+                                      "builtin type '%s' declaration mismatches",
                                       name);
     }
 
@@ -219,7 +219,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
   if (stmt->params && vec_get_size(stmt->params) > 0) {
     if (!stmt->type_value)
       return create_exception_value(vm,
-                                    "run: generic type alias '%s' requires type expression",
+                                    "generic type alias '%s' requires type expression",
                                     name);
 
     /* build engine-level generic_param_t vec from AST cubec_generic_param_t
@@ -255,7 +255,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
         if (type_get_kind(value_get_type(vt)) != TYPE_KIND_TYPE) {
           allocator_free(allocator, &params_vec);
           return create_exception_value(vm,
-              "run: generic param '%s' type annotation must produce a type, got '%s'",
+              "generic param '%s' type annotation must produce a type, got '%s'",
               pname, type_get_name(value_get_type(vt)));
         }
         param_type = (type_t)value_get_data(vt);
@@ -307,7 +307,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
             allocator_free(allocator, &extends);
             allocator_free(allocator, &params_vec);
             return create_exception_value(vm,
-                "run: generic param constraint must produce a type, got '%s'",
+                "generic param constraint must produce a type, got '%s'",
                 type_get_name(value_get_type(cv)));
           }
           type_t constraint_type = (type_t)value_get_data(cv);
@@ -337,7 +337,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
 
   if (!stmt->type_value)
     return create_exception_value(vm,
-                                  "run: type alias '%s' requires type expression",
+                                  "type alias '%s' requires type expression",
                                   name);
 
   value_t type_val = run_expression(vm, stmt->type_value, false);
@@ -355,7 +355,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
 
   if (type_get_kind(value_get_type(type_val)) != TYPE_KIND_TYPE)
     return create_exception_value(vm,
-                                  "run: type alias expression must produce a type, got '%s'",
+                                  "type alias expression must produce a type, got '%s'",
                                   type_get_name(value_get_type(type_val)));
 
   /* type_val is already in scope->values; just bind the name */

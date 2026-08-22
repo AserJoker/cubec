@@ -74,14 +74,14 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
   if (stmt->is_extern || stmt->is_builtin) {
     if (!decl->type)
       return create_exception_value(vm,
-                                    "run: %s variable '%s' requires type annotation",
+                                    "%s variable '%s' requires type annotation",
                                     stmt->is_extern ? "extern" : "builtin",
                                     name);
     type_t type = _eval_type(vm, decl->type, scope_before, shadow);
     if (!type) {
       if (shadow) return create_void_value(vm);
       return create_exception_value(vm,
-                                    "run: failed to evaluate type for %s variable '%s'",
+                                    "failed to evaluate type for %s variable '%s'",
                                     stmt->is_extern ? "extern" : "builtin",
                                     name);
     }
@@ -93,7 +93,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
   if (stmt->is_comptime) {
     if (!decl->expression)
       return create_exception_value(vm,
-                                    "run: comptime variable '%s' requires initializer",
+                                    "comptime variable '%s' requires initializer",
                                     name);
     value_t result = run_expression(vm, decl->expression, true);
     if (value_is_abnormal(result)) {
@@ -113,7 +113,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
       if (!annotated) {
         if (shadow) return create_void_value(vm);
         return create_exception_value(vm,
-                                      "run: failed to evaluate type for comptime variable '%s'",
+                                      "failed to evaluate type for comptime variable '%s'",
                                       name);
       }
       value_t casted = value_safe_cast(vm, result, annotated);
@@ -138,20 +138,20 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
   /* ---- normal / using: must have initializer ---- */
   if (!decl->expression)
     return create_exception_value(vm,
-                                  "run: variable '%s' requires initializer",
+                                  "variable '%s' requires initializer",
                                   name);
 
   /* ---- undefined initializer: create TDZ shadow ---- */
   if (decl->expression->kind == CUBEC_NODE_LITERAL_UNDEFINED) {
     if (!decl->type)
       return create_exception_value(vm,
-                                    "run: undefined variable '%s' requires type annotation",
+                                    "undefined variable '%s' requires type annotation",
                                     name);
     type_t type = _eval_type(vm, decl->type, scope_before, shadow);
     if (!type) {
       if (shadow) return create_void_value(vm);
       return create_exception_value(vm,
-                                    "run: failed to evaluate type for variable '%s'",
+                                    "failed to evaluate type for variable '%s'",
                                     name);
     }
     /* TDZ: initialized=false */
@@ -179,7 +179,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
     if (!annotated) {
       if (shadow) return create_void_value(vm);
       return create_exception_value(vm,
-                                    "run: failed to evaluate type for variable '%s'",
+                                    "failed to evaluate type for variable '%s'",
                                     name);
     }
     value_t casted = value_safe_cast(vm, result, annotated);

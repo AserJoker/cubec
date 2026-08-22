@@ -55,7 +55,7 @@ value_t run_expression_subscript(vm_t vm, node_t node, bool shadow) {
   size_t argc = vec_get_size(sub->arguments);
   if (argc != 1)
     return create_exception_value(vm,
-                                  "run: subscript requires exactly one argument, got %zu",
+                                  "subscript requires exactly one argument, got %zu",
                                   argc);
 
   node_t index_node = (node_t)vec_get(sub->arguments, 0);

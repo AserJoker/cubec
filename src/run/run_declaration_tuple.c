@@ -74,6 +74,9 @@ value_t run_declaration_tuple(vm_t vm, node_t node, bool shadow) {
   tuple_type_t tt = tuple_type_create(allocator, element_types, true);
   allocator_free(allocator, &element_types);
 
+  /* register in vm->types for lifecycle management */
+  vec_push(vm_get_types(vm), tt);
+
   /* create a type value wrapping the tuple type */
   type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
   return vm_create_value_ref(vm, type_type, (type_t)tt, NULL);

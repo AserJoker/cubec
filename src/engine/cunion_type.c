@@ -668,7 +668,7 @@ value_t vm_cunion_add_field(vm_t vm, value_t type_val,
                             const char *name, value_t field_type_val, bool pub) {
   cunion_type_t ct = _unwrap_cunion_type(vm, type_val);
   if (!ct)
-    return create_exception_value(vm, "vm_cunion_add_field: expected cunion type value");
+    return create_exception_value(vm, "expected cunion type value");
   type_t inner = (type_t)value_get_data(type_val);
   if (ct->sealed)
     return create_exception_value(vm, "cannot add field '%s' to sealed cunion type '%s'",
@@ -684,7 +684,7 @@ value_t vm_cunion_add_field(vm_t vm, value_t type_val,
 value_t vm_cunion_seal(vm_t vm, value_t type_val) {
   cunion_type_t ct = _unwrap_cunion_type(vm, type_val);
   if (!ct)
-    return create_exception_value(vm, "vm_cunion_seal: expected cunion type value");
+    return create_exception_value(vm, "expected cunion type value");
   if (!_ct_seal(ct))
     return create_exception_value(vm, "cannot seal empty cunion type '%s'",
                                   type_get_name((type_t)ct));

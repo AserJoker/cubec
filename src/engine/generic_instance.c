@@ -2,10 +2,17 @@
 #include "core/vec.h"
 #include "cubec/declaration_function.h"
 #include "cubec/declaration_struct.h"
+#include "cubec/declaration_union.h"
+#include "cubec/declaration_interface.h"
 #include "cubec/function_argument.h"
 #include "cubec/function_capture.h"
 #include "cubec/literal_identifier.h"
+#include "cubec/statement_struct.h"
+#include "cubec/statement_union.h"
+#include "cubec/statement_interface.h"
+#include "cubec/interface_method.h"
 #include "cubec/struct_field.h"
+#include "cubec/union_field.h"
 #include "engine/ast_func.h"
 #include "engine/callable_type.h"
 #include "engine/diagnostic.h"
@@ -16,6 +23,8 @@
 #include "engine/name.h"
 #include "engine/scope.h"
 #include "engine/struct_type.h"
+#include "engine/union_type.h"
+#include "engine/interface_type.h"
 #include "engine/tuple_type.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -148,12 +157,21 @@ value_t create_struct_instance(vm_t vm, value_t tmpl, size_t argc,
   if (cached)
     return cached;
 
-  /* 2. get AST node */
-  cubec_declaration_struct_t decl =
-      (cubec_declaration_struct_t)generic_type_get_node(gt);
-  if (!decl)
-    return create_exception_value(vm, "generic struct '%s' has no AST node",
+  /* 2. get AST node — may be declaration_struct_t (expression form)
+   *    or statement_struct_t (statement form). Both have .members. */
+  void *raw_node = generic_type_get_node(gt);
+  if (!raw_node)
+    return create_exception_value(vm, "generic struct '%s' is missing its definition",
                                   type_get_name(self_type));
+  node_t node = (node_t)raw_node;
+  vec_t members;
+  if (node->kind == CUBEC_NODE_STATEMENT_STRUCT) {
+    cubec_statement_struct_t stmt = (cubec_statement_struct_t)node;
+    members = stmt->members;
+  } else {
+    cubec_declaration_struct_t decl = (cubec_declaration_struct_t)node;
+    members = decl->members;
+  }
 
   /* 3. bind parameters in a temporary scope (child of current) */
   (void)_bind_params(vm, gt, argc, argv);
@@ -164,7 +182,6 @@ value_t create_struct_instance(vm_t vm, value_t tmpl, size_t argc,
       vm_create_struct_type_value(vm, base_name, false, "<builtin>");
 
   /* 5. iterate members, add fields */
-  vec_t members = decl->members;
   size_t mc = vec_get_size(members);
   for (size_t i = 0; i < mc; i++) {
     node_t member = (node_t)vec_get(members, i);
@@ -230,6 +247,270 @@ value_t create_struct_instance(vm_t vm, value_t tmpl, size_t argc,
   return instance;
 }
 
+/* ---- create_union_instance ---- */
+
+value_t create_union_instance(vm_t vm, value_t tmpl, size_t argc,
+                              value_t *argv) {
+  type_t self_type = value_get_type(tmpl);
+  generic_type_t gt = (generic_type_t)self_type;
+  allocator_t allocator = vm_get_allocator(vm);
+
+  /* 1. cache lookup */
+  value_t cached = _cache_lookup(vm, gt, argc, argv);
+  if (cached)
+    return cached;
+
+  /* 2. get AST node — may be declaration_union_t (expression form)
+   *    or statement_union_t (statement form). */
+  void *raw_node = generic_type_get_node(gt);
+  if (!raw_node)
+    return create_exception_value(vm, "generic union '%s' is missing its definition",
+                                  type_get_name(self_type));
+  node_t node = (node_t)raw_node;
+  vec_t members;
+  if (node->kind == CUBEC_NODE_STATEMENT_UNION) {
+    cubec_statement_union_t stmt = (cubec_statement_union_t)node;
+    members = stmt->members;
+  } else {
+    cubec_declaration_union_t decl = (cubec_declaration_union_t)node;
+    members = decl->members;
+  }
+
+  /* 3. bind parameters in a temporary scope (child of current) */
+  (void)_bind_params(vm, gt, argc, argv);
+
+  /* 4. create the concrete union type (registers on temp scope) */
+  const char *base_name = type_get_name(self_type);
+  value_t type_val =
+      vm_create_union_type_value(vm, base_name, false, "<builtin>");
+
+  /* 5. iterate members, add fields */
+  size_t mc = vec_get_size(members);
+  for (size_t i = 0; i < mc; i++) {
+    node_t member = (node_t)vec_get(members, i);
+
+    if (member->kind == CUBEC_NODE_UNION_FIELD) {
+      cubec_union_field_t field = (cubec_union_field_t)member;
+      const char *field_name =
+          string_get(((cubec_literal_identifier_t)field->name)->value);
+
+      value_t field_type_val = run_expression(vm, field->type, false);
+      if (value_is_abnormal(field_type_val)) {
+        vm_pop_scope(vm);
+        return field_type_val;
+      }
+
+      if (type_get_kind(value_get_type(field_type_val)) != TYPE_KIND_TYPE) {
+        vm_pop_scope(vm);
+        return create_exception_value(
+            vm, "union field '%s' type expression must produce a type, got '%s'",
+            field_name, type_get_name(value_get_type(field_type_val)));
+      }
+
+      vm_union_add_field(vm, type_val, field_name, field_type_val, true);
+    } else if (member->kind == CUBEC_NODE_STRUCT_FIELD) {
+      /* struct_field is used in some AST contexts (e.g. cunion) — handle it */
+      cubec_struct_field_t field = (cubec_struct_field_t)member;
+      const char *field_name =
+          string_get(((cubec_literal_identifier_t)field->name)->value);
+
+      value_t field_type_val = run_expression(vm, field->type, false);
+      if (value_is_abnormal(field_type_val)) {
+        vm_pop_scope(vm);
+        return field_type_val;
+      }
+
+      if (type_get_kind(value_get_type(field_type_val)) != TYPE_KIND_TYPE) {
+        vm_pop_scope(vm);
+        return create_exception_value(
+            vm, "union field '%s' type expression must produce a type, got '%s'",
+            field_name, type_get_name(value_get_type(field_type_val)));
+      }
+
+      vm_union_add_field(vm, type_val, field_name, field_type_val,
+                         field->is_pub);
+    }
+  }
+
+  /* 6. seal */
+  vm_union_seal(vm, type_val);
+
+  /* 7. clone the sealed union type value into the generic's isolated scope
+   *    BEFORE popping temp scope. */
+  scope_t orig_scope = vm_get_current_scope(vm);
+  scope_t gt_scope = generic_type_get_scope(gt);
+  vm_set_scope(vm, gt_scope);
+  value_t instance = value_clone(vm, type_val);
+  vm_set_scope(vm, orig_scope);
+
+  /* 8. pop+dispose temp scope */
+  vm_pop_scope(vm);
+
+  if (value_is_abnormal(instance))
+    return instance;
+
+  /* 9. build cache entry */
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  for (size_t i = 0; i < argc; i++)
+    vec_push(params_vec, argv[i]);
+
+  generic_instance_t gi =
+      generic_instance_create(allocator, params_vec, instance);
+  vec_push(generic_type_get_instances(gt), gi);
+
+  return instance;
+}
+
+/* ---- create_interface_instance ---- */
+
+value_t create_interface_instance(vm_t vm, value_t tmpl, size_t argc,
+                                  value_t *argv) {
+  type_t self_type = value_get_type(tmpl);
+  generic_type_t gt = (generic_type_t)self_type;
+  allocator_t allocator = vm_get_allocator(vm);
+
+  /* 1. cache lookup */
+  value_t cached = _cache_lookup(vm, gt, argc, argv);
+  if (cached)
+    return cached;
+
+  /* 2. get AST node — may be declaration_interface_t (expression form)
+   *    or statement_interface_t (statement form). */
+  void *raw_node = generic_type_get_node(gt);
+  if (!raw_node)
+    return create_exception_value(vm, "generic interface '%s' is missing its definition",
+                                  type_get_name(self_type));
+  node_t node = (node_t)raw_node;
+  vec_t members;
+  if (node->kind == CUBEC_NODE_STATEMENT_INTERFACE) {
+    cubec_statement_interface_t stmt = (cubec_statement_interface_t)node;
+    members = stmt->members;
+  } else {
+    cubec_declaration_interface_t decl = (cubec_declaration_interface_t)node;
+    members = decl->members;
+  }
+
+  /* 3. bind parameters in a temporary scope (child of current) */
+  (void)_bind_params(vm, gt, argc, argv);
+
+  /* 4. create the concrete interface type (registers on temp scope) */
+  const char *base_name = type_get_name(self_type);
+  value_t type_val =
+      vm_create_interface_type_value(vm, base_name, false, "<builtin>");
+
+  /* 5. iterate members, add method signatures */
+  size_t mc = vec_get_size(members);
+  for (size_t i = 0; i < mc; i++) {
+    node_t member = (node_t)vec_get(members, i);
+    if (member->kind != CUBEC_NODE_INTERFACE_METHOD)
+      continue;
+
+    cubec_interface_method_t method = (cubec_interface_method_t)member;
+    const char *method_name =
+        string_get(((cubec_literal_identifier_t)method->name)->value);
+
+    /* evaluate parameter types */
+    vec_init_t ptvi = {.auto_dispose = false};
+    vec_t param_types = (vec_t)allocator_create(allocator, &g_vec_class, &ptvi);
+    vec_t args = method->arguments;
+    size_t arg_count = args ? vec_get_size(args) : 0;
+
+    for (size_t j = 0; j < arg_count; j++) {
+      cubec_function_argument_t param =
+          (cubec_function_argument_t)vec_get(args, j);
+      if (!param->type) {
+        allocator_free(allocator, &param_types);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "interface method '%s' parameter requires type annotation",
+            method_name);
+      }
+      value_t pt_val = run_expression(vm, param->type, false);
+      if (value_is_abnormal(pt_val)) {
+        allocator_free(allocator, &param_types);
+        vm_pop_scope(vm);
+        return pt_val;
+      }
+      if (type_get_kind(value_get_type(pt_val)) != TYPE_KIND_TYPE) {
+        allocator_free(allocator, &param_types);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "interface method '%s' parameter type must produce a type, got '%s'",
+            method_name, type_get_name(value_get_type(pt_val)));
+      }
+      type_t pt = (type_t)value_get_data(pt_val);
+      vec_push(param_types, pt);
+    }
+
+    /* evaluate return type */
+    type_t return_type;
+    if (method->return_type) {
+      value_t rt_val = run_expression(vm, method->return_type, false);
+      if (value_is_abnormal(rt_val)) {
+        allocator_free(allocator, &param_types);
+        vm_pop_scope(vm);
+        return rt_val;
+      }
+      if (type_get_kind(value_get_type(rt_val)) != TYPE_KIND_TYPE) {
+        allocator_free(allocator, &param_types);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "interface method '%s' return type must produce a type, got '%s'",
+            method_name, type_get_name(value_get_type(rt_val)));
+      }
+      return_type = (type_t)value_get_data(rt_val);
+    } else {
+      return_type = (type_t)value_get_data(vm_get_void_type(vm));
+    }
+
+    /* create callable_type value for the method signature */
+    value_t ctv = vm_create_callable_type_value(vm, param_types, return_type,
+                                                  false, true, "<module>");
+    allocator_free(allocator, &param_types);
+
+    /* add method to interface */
+    value_t r = vm_interface_add_method(vm, type_val, method_name, ctv);
+    if (value_is_abnormal(r)) {
+      vm_pop_scope(vm);
+      return r;
+    }
+  }
+
+  /* 6. seal */
+  value_t seal_r = vm_interface_seal(vm, type_val);
+  if (value_is_abnormal(seal_r)) {
+    vm_pop_scope(vm);
+    return seal_r;
+  }
+
+  /* 7. clone the sealed interface type value into the generic's isolated scope
+   *    BEFORE popping temp scope. */
+  scope_t orig_scope = vm_get_current_scope(vm);
+  scope_t gt_scope = generic_type_get_scope(gt);
+  vm_set_scope(vm, gt_scope);
+  value_t instance = value_clone(vm, type_val);
+  vm_set_scope(vm, orig_scope);
+
+  /* 8. pop+dispose temp scope */
+  vm_pop_scope(vm);
+
+  if (value_is_abnormal(instance))
+    return instance;
+
+  /* 9. build cache entry */
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  for (size_t i = 0; i < argc; i++)
+    vec_push(params_vec, argv[i]);
+
+  generic_instance_t gi =
+      generic_instance_create(allocator, params_vec, instance);
+  vec_push(generic_type_get_instances(gt), gi);
+
+  return instance;
+}
+
 /* ---- create_type_instance ---- */
 
 value_t create_type_instance(vm_t vm, value_t tmpl, size_t argc,
@@ -247,7 +528,7 @@ value_t create_type_instance(vm_t vm, value_t tmpl, size_t argc,
    *    is the RHS type_value expression to evaluate. */
   void *node = generic_type_get_node(gt);
   if (!node)
-    return create_exception_value(vm, "generic type '%s' has no AST node",
+    return create_exception_value(vm, "generic type '%s' is missing its definition",
                                   type_get_name(self_type));
   node_t type_expr = (node_t)node;
 
@@ -368,7 +649,7 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
   cubec_declaration_function_t decl =
       (cubec_declaration_function_t)generic_fn_type_get_node(gt_fn);
   if (!decl)
-    return create_exception_value(vm, "generic fn '%s' has no AST node",
+    return create_exception_value(vm, "generic function '%s' is missing its definition",
                                   type_get_name(self_type));
 
   /* 3. bind generic params in a temporary scope (child of current) */

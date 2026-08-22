@@ -608,7 +608,7 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
       allocator_free(allocator, &formal_types);
       allocator_free(allocator, &entries);
       return create_exception_value(vm,
-          "generic inference: parameter '%s' requires type annotation",
+          "parameter '%s' requires type annotation",
           pname);
     }
     value_t type_val = run_expression(vm, farg->type, false);
@@ -632,7 +632,7 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
       allocator_free(allocator, &formal_types);
       allocator_free(allocator, &entries);
       return create_exception_value(vm,
-          "generic inference: parameter type expression must produce a type, got '%s'",
+          "parameter type expression must produce a type, got '%s'",
           got_name);
     }
     formal_types[i] = (type_t)value_get_data(type_val);
@@ -674,7 +674,7 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
       allocator_free(allocator, &infer_ctx);
       allocator_free(allocator, &entries);
       return create_exception_value(vm,
-          "generic inference: type mismatch at argument %zu: "
+          "type mismatch at argument %zu: "
           "expected formal type '%s', got actual type '%s'",
           i, formal_name, actual_name);
     }
@@ -761,7 +761,7 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
       allocator_free(allocator, &infer_ctx);
       allocator_free(allocator, &entries);
       return create_exception_value(vm,
-          "generic inference: could not infer type parameter '%s'",
+          "could not infer type parameter '%s'",
           pname);
     }
   }

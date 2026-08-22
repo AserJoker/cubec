@@ -19,7 +19,7 @@ static value_t _run_unary(vm_t vm, const char *op, node_t right,
   if (strcmp(op, "-") == 0) return value_neg(vm, rv);
   if (strcmp(op, "~") == 0) return value_bnot(vm, rv);
 
-  return create_exception_value(vm, "run: unknown unary operator '%s'", op);
+  return create_exception_value(vm, "unknown unary operator '%s'", op);
 }
 
 /* ---- Binary ---- */
@@ -96,7 +96,7 @@ static value_t _run_binary(vm_t vm, const char *op, node_t left,
     return value_lnot(vm, lt);
   }
 
-  return create_exception_value(vm, "run: unknown binary operator '%s'", op);
+  return create_exception_value(vm, "unknown binary operator '%s'", op);
 }
 
 value_t run_expression_binary(vm_t vm, node_t node, bool shadow) {

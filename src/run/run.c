@@ -67,13 +67,19 @@ value_t run_expression(vm_t vm, node_t node, bool shadow) {
     result = run_declaration_tuple(vm, node, shadow); break;
   case CUBEC_NODE_DECLARATION_CALLABLE:
     result = run_declaration_callable(vm, node, shadow); break;
+  case CUBEC_NODE_DECLARATION_STRUCT:
+    result = run_declaration_struct(vm, node, shadow); break;
+  case CUBEC_NODE_DECLARATION_UNION:
+    result = run_declaration_union(vm, node, shadow); break;
+  case CUBEC_NODE_DECLARATION_INTERFACE:
+    result = run_declaration_interface(vm, node, shadow); break;
   case CUBEC_NODE_EXPRESSION_WILDCARD:
     result = run_expression_wildcard(vm, node, shadow); break;
   case CUBEC_NODE_EXPRESSION_SPREAD:
     result = run_expression_spread(vm, node, shadow); break;
   default:
     result = create_exception_value(vm,
-                                    "run_expression: unsupported node kind %d",
+                                    "unsupported node kind %d",
                                     node->kind);
     break;
   }
@@ -88,7 +94,7 @@ value_t run_expression(vm_t vm, node_t node, bool shadow) {
       !value_is_abnormal(result) && !value_is_interrupt(result) &&
       type_get_kind(value_get_type(result)) != TYPE_KIND_VOID)
     return create_exception_value(vm,
-                                  "run: cannot use compile-time value of type '%s' at runtime",
+                                  "cannot use compile-time value of type '%s' at runtime",
                                   type_get_name(value_get_type(result)));
 
   return result;
@@ -115,16 +121,24 @@ value_t run_statement(vm_t vm, node_t node, bool shadow) {
     return run_statement_function(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_IF:
     return run_statement_if(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_STRUCT:
+    return run_statement_struct(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_UNION:
+    return run_statement_union(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_CUNION:
+    return run_statement_cunion(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_INTERFACE:
+    return run_statement_interface(vm, node, shadow);
   default:
     if (shadow) {
       diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
                            node->location,
-                           "run_statement: unsupported statement kind %d",
+                           "unsupported statement kind %d",
                            node->kind);
       return create_void_value(vm);
     }
     return create_exception_value(vm,
-                                  "run_statement: unsupported statement kind %d",
+                                  "unsupported statement kind %d",
                                   node->kind);
   }
 }

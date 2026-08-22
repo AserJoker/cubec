@@ -47,7 +47,7 @@ value_t run_statement_expression(vm_t vm, node_t node, bool shadow) {
     }
     /* script mode: non-void result is an error */
     return create_exception_value(vm,
-        "run: expression statement discards non-void value of type '%s'",
+        "expression statement discards non-void value of type '%s'",
         type_get_name(result_type));
   }
 

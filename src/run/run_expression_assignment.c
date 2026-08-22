@@ -43,7 +43,7 @@ static value_t _lvalue_read_subscript(vm_t vm, node_t node,
   size_t argc = vec_get_size(sub->arguments);
   if (argc != 1)
     return create_exception_value(vm,
-                                  "run: subscript requires exactly one argument, got %zu",
+                                  "subscript requires exactly one argument, got %zu",
                                   argc);
   node_t index_node = (node_t)vec_get(sub->arguments, 0);
   value_t index = run_expression(vm, index_node, shadow);
@@ -74,7 +74,7 @@ static value_t _lvalue_read(vm_t vm, node_t lvalue, bool shadow) {
     return _lvalue_read_namespace_access(vm, lvalue, shadow);
   default:
     return create_exception_value(vm,
-                                  "run: invalid lvalue node kind %d",
+                                  "invalid lvalue node kind %d",
                                   lvalue->kind);
   }
 }
@@ -117,7 +117,7 @@ static value_t _lvalue_write_subscript(vm_t vm, node_t node,
   size_t argc = vec_get_size(sub->arguments);
   if (argc != 1)
     return create_exception_value(vm,
-                                  "run: subscript requires exactly one argument, got %zu",
+                                  "subscript requires exactly one argument, got %zu",
                                   argc);
   node_t index_node = (node_t)vec_get(sub->arguments, 0);
   value_t index = run_expression(vm, index_node, false);
@@ -152,7 +152,7 @@ static value_t _lvalue_write(vm_t vm, node_t lvalue, value_t rv) {
     return _lvalue_write_namespace_access(vm, lvalue, rv);
   default:
     return create_exception_value(vm,
-                                  "run: invalid lvalue node kind %d",
+                                  "invalid lvalue node kind %d",
                                   lvalue->kind);
   }
 }
@@ -182,7 +182,7 @@ static value_t _compound_apply(vm_t vm, const char *op, value_t lv,
     return value_lnot(vm, value_lnot(vm, b));
   }
   return create_exception_value(vm,
-                                "run: unknown compound operator '%s'", op);
+                                "unknown compound operator '%s'", op);
 }
 
 /* ---- check if identifier is discard wildcard '_' ---- */
@@ -218,7 +218,7 @@ value_t run_expression_assignment(vm_t vm, node_t node, bool shadow) {
     break;
   default:
     return create_exception_value(vm,
-                                  "run: invalid lvalue node kind %d",
+                                  "invalid lvalue node kind %d",
                                   asgn->left->kind);
   }
 

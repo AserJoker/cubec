@@ -145,7 +145,7 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
   allocator_t alloc = vm_get_allocator(vm);
   ast_func_t af = (ast_func_t)value_get_data(fn);
   if (!af || !af->node)
-    return create_exception_value(vm, "ast_func: no AST node");
+    return create_exception_value(vm, "no AST node");
 
   callable_type_t ct = (callable_type_t)value_get_type(fn);
 

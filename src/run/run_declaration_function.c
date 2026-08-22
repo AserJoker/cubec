@@ -222,7 +222,7 @@ value_t run_declaration_function(vm_t vm, node_t node, bool shadow) {
         return create_void_value(vm);
       }
       return create_exception_value(vm,
-          "run: generic function '%s' param evaluation error",
+          "generic function '%s' param evaluation error",
           name ? name : "<anonymous>");
     }
 
@@ -275,7 +275,7 @@ value_t run_declaration_function(vm_t vm, node_t node, bool shadow) {
       return create_void_value(vm);
     }
     return create_exception_value(vm,
-        "run: function '%s' param type evaluation error",
+        "function '%s' param type evaluation error",
         name ? name : "<anonymous>");
   }
 
@@ -298,7 +298,7 @@ value_t run_declaration_function(vm_t vm, node_t node, bool shadow) {
     if (type_get_kind(value_get_type(rt_val)) != TYPE_KIND_TYPE) {
       allocator_free(allocator, &param_types);
       return create_exception_value(vm,
-          "run: function '%s' return type expression must produce a type, got '%s'",
+          "function '%s' return type expression must produce a type, got '%s'",
           name ? name : "<anonymous>",
           type_get_name(value_get_type(rt_val)));
     }
@@ -335,7 +335,7 @@ value_t run_declaration_function(vm_t vm, node_t node, bool shadow) {
         return create_void_value(vm);
       }
       return create_exception_value(vm,
-          "run: function '%s' closure capture not found in scope",
+          "function '%s' closure capture not found in scope",
           name ? name : "<anonymous>");
     }
   }
