@@ -137,18 +137,8 @@ const char *generic_placeholder_get_name(type_t t) {
 }
 
 /* ===================================================================
- *  Inference state (internal)
+ *  Inference state
  * =================================================================== */
-
-typedef struct _infer_entry_t {
-  const char *name;
-  type_t      placeholder;
-  value_t     inferred_value;       /* NULL if not yet inferred */
-  bool        is_pack;
-  bool        is_value_param;
-  type_t      param_type;           /* declared type for value params (e.g. u64), NULL for type params */
-  vec_t       inferred_pack_values; /* non-NULL for pack params: vec of value_t */
-} infer_entry_t;
 
 /* Opaque context wrapper — exposed as void* to vtable consumers */
 typedef struct _infer_ctx_impl_t {
@@ -232,6 +222,17 @@ static infer_ctx_t _make_infer_ctx(allocator_t allocator,
   impl->entry_count = entry_count;
   impl->entries = entries;
   return (infer_ctx_t)impl;
+}
+
+infer_ctx_t infer_ctx_create(allocator_t allocator,
+                             void *entries, size_t count) {
+  return _make_infer_ctx(allocator, (infer_entry_t *)entries, count);
+}
+
+value_t infer_ctx_get_inferred(infer_ctx_t ctx, size_t index) {
+  infer_ctx_impl_t *impl = (infer_ctx_impl_t *)ctx;
+  if (index >= impl->entry_count) return NULL;
+  return impl->entries[index].inferred_value;
 }
 
 /* ===================================================================

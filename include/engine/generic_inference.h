@@ -67,6 +67,47 @@ bool infer_walk_assign_param(vm_t vm, infer_ctx_t ctx,
 bool infer_walk_assign_value(vm_t vm, infer_ctx_t ctx,
                              type_t value_type, void *data);
 
+/* ---- Infer context construction (for testing / manual inference) ---- */
+
+/**
+ * @brief Create an inference context with the given entries.
+ *
+ * Each entry describes one generic parameter to infer.
+ * The caller provides the entry array (typically stack-allocated).
+ *
+ * @param allocator  Allocator for the context struct
+ * @param entries    Array of infer entry descriptors
+ * @param count      Number of entries
+ * @return opaque inference context
+ */
+infer_ctx_t infer_ctx_create(allocator_t allocator,
+                             /* infer_entry_t */ void *entries,
+                             size_t count);
+
+/**
+ * @brief Descriptor for one generic parameter in manual inference.
+ *
+ * Used with infer_ctx_create to describe parameters to infer.
+ */
+typedef struct _infer_entry_t {
+  const char *name;
+  type_t      placeholder;           /* for type params, the placeholder type */
+  value_t     inferred_value;        /* NULL if not yet inferred */
+  bool        is_pack;
+  bool        is_value_param;
+  type_t      param_type;            /* declared type for value params */
+  vec_t       inferred_pack_values;  /* for pack params */
+} infer_entry_t;
+
+/**
+ * @brief Get the inferred value for an entry by index.
+ *
+ * @param ctx   Inference context
+ * @param index Entry index
+ * @return the inferred value, or NULL if not yet inferred
+ */
+value_t infer_ctx_get_inferred(infer_ctx_t ctx, size_t index);
+
 /* ---- Main entry point ---- */
 
 /**
