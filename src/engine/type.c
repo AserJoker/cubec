@@ -159,8 +159,13 @@ type_t type_create_with_mut(vm_t vm, type_t src, bool mut) {
 /* ---- Bootstrap type "type" vtable ---- */
 
 static value_t _type_clone(vm_t vm, value_t self) {
-  if (value_is_shadow(self))
+  if (value_is_shadow(self)) {
+    /* TYPE_KIND_TYPE must never be shadowed — treat as internal error. */
+    if (type_get_kind(value_get_type(self)) == TYPE_KIND_TYPE)
+      return create_exception_value(vm,
+          "internal error: type value must not be shadow");
     return vm_create_value_shadow(vm, value_get_type(self), NULL, value_is_initialized(self));
+  }
   type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
   type_t inner = (type_t)value_get_data(self);
   allocator_t allocator = vm_get_allocator(vm);
@@ -173,6 +178,15 @@ static value_t _type_clone(vm_t vm, value_t self) {
 }
 
 static value_t _type_equal(vm_t vm, value_t a, value_t b) {
+  /* If either operand is a shadow TYPE_KIND_TYPE, report internal error:
+   * TYPE_KIND_TYPE must never be shadowed. For other shadow types,
+   * return a shadow bool (type-only comparison). */
+  if (value_is_shadow(a) && type_get_kind(value_get_type(a)) == TYPE_KIND_TYPE)
+    return create_exception_value(vm,
+        "internal error: type value must not be shadow");
+  if (value_is_shadow(b) && type_get_kind(value_get_type(b)) == TYPE_KIND_TYPE)
+    return create_exception_value(vm,
+        "internal error: type value must not be shadow");
   type_t ta = (type_t)value_get_data(a);
   type_t tb = (type_t)value_get_data(b);
   /* wildcard short-circuit: any type equal to wildcard */
@@ -189,6 +203,13 @@ static value_t _type_equal(vm_t vm, value_t a, value_t b) {
 }
 
 static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
+  /* TYPE_KIND_TYPE must never be shadowed — internal error guard. */
+  if (value_is_shadow(sub) && type_get_kind(value_get_type(sub)) == TYPE_KIND_TYPE)
+    return create_exception_value(vm,
+        "internal error: type value must not be shadow");
+  if (value_is_shadow(super_val) && type_get_kind(value_get_type(super_val)) == TYPE_KIND_TYPE)
+    return create_exception_value(vm,
+        "internal error: type value must not be shadow");
   type_t t_sub = (type_t)value_get_data(sub);
   type_t t_super = (type_t)value_get_data(super_val);
   /* wildcard short-circuit: any type extends wildcard */
@@ -205,8 +226,16 @@ static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
 }
 
 static value_t _type_get_prop(vm_t vm, value_t self, const char *name) {
-  if (value_is_shadow(self))
+  if (value_is_shadow(self)) {
+    /* TYPE_KIND_TYPE must never be shadowed: its data carries concrete type
+     * information needed for compile-time type resolution (e.g. Vec::iterator).
+     * A shadow TYPE_KIND_TYPE indicates an upstream bug — report it rather
+     * than silently producing a broken shadow value with NULL data. */
+    if (type_get_kind(value_get_type(self)) == TYPE_KIND_TYPE)
+      return create_exception_value(vm,
+          "internal error: type value must not be shadow");
     return vm_create_value_shadow(vm, value_get_type(self), NULL, true);
+  }
   type_t inner = (type_t)value_get_data(self);
   if (!inner->vtable.type_get_prop)
     return create_exception_value(vm, "type '%s' does not support static property access",
@@ -215,8 +244,12 @@ static value_t _type_get_prop(vm_t vm, value_t self, const char *name) {
 }
 
 static value_t _type_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
-  if (value_is_shadow(self))
+  if (value_is_shadow(self)) {
+    if (type_get_kind(value_get_type(self)) == TYPE_KIND_TYPE)
+      return create_exception_value(vm,
+          "internal error: type value must not be shadow");
     return create_void_value(vm);
+  }
   type_t inner = (type_t)value_get_data(self);
   if (!inner->vtable.type_set_prop)
     return create_exception_value(vm, "type '%s' does not support static property assignment",
@@ -225,6 +258,7 @@ static value_t _type_set_prop(vm_t vm, value_t self, const char *name, value_t v
 }
 
 static vec_t _type_spread(vm_t vm, value_t self) {
+  if (value_is_shadow(self)) return NULL;
   type_t inner = (type_t)value_get_data(self);
   /* If the inner type is a tuple, expand it into individual type values */
   if (inner->kind == TYPE_KIND_TUPLE) {
