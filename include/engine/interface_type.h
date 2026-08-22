@@ -88,6 +88,16 @@ value_t _interface_type_check_extends(struct _vm_t *vm, interface_type_t it,
 value_t vm_create_interface_type_value(struct _vm_t *vm, const char *name,
                                         bool mut, const char *module_id);
 
+/* ---- Generic instantiation ---- */
+
+/** @brief Standard generic instantiation callback for interface types.
+ *  Checks instance cache, creates a concrete interface type on miss by
+ *  evaluating the interface declaration's method type expressions with
+ *  generic parameter substitution.
+ *  Follows create_instance_fn_t signature. */
+value_t create_interface_instance(struct _vm_t *vm, value_t tmpl,
+                                  size_t argc, value_t *argv);
+
 #ifdef __cplusplus
 }
 #endif

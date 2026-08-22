@@ -155,6 +155,16 @@ value_t _union_type_create_value(struct _vm_t *vm, union_type_t ut,
 value_t vm_create_union_type_value(struct _vm_t *vm, const char *name,
                                     bool mut, const char *module_id);
 
+/* ---- Generic instantiation ---- */
+
+/** @brief Standard generic instantiation callback for union types.
+ *  Checks instance cache, creates a concrete union type on miss by
+ *  evaluating the union declaration's field type expressions with
+ *  generic parameter substitution.
+ *  Follows create_instance_fn_t signature. */
+value_t create_union_instance(struct _vm_t *vm, value_t tmpl,
+                              size_t argc, value_t *argv);
+
 #ifdef __cplusplus
 }
 #endif

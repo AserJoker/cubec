@@ -711,7 +711,8 @@ static value_t _struct_safe_cast(vm_t vm, value_t self, type_t to) {
     return eq;
   if (value_is_shadow(eq) || !(*(bool *)value_get_data(eq)))
     return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
-                              type_get_name(from), type_get_name(to));
+                              type_get_name(from) ? type_get_name(from) : "struct <anonymous>",
+                              type_get_name(to) ? type_get_name(to) : "struct <anonymous>");
   if (value_is_shadow(self))
     return _create_struct_shadow(vm, (struct_type_t)to, value_is_initialized(self));
   return self;
@@ -970,7 +971,7 @@ value_t vm_struct_add_field(vm_t vm, value_t type_val,
                             const char *name, value_t field_type_val, bool pub) {
   struct_type_t st = _unwrap_struct_type(vm, type_val);
   if (!st)
-    return create_exception_value(vm, "vm_struct_add_field: expected struct type value");
+    return create_exception_value(vm, "expected struct type value");
   type_t inner = (type_t)value_get_data(type_val);
   if (st->sealed)
     return create_exception_value(vm, "cannot add field '%s' to sealed struct type '%s'",
@@ -986,7 +987,7 @@ value_t vm_struct_add_field(vm_t vm, value_t type_val,
 value_t vm_struct_seal(vm_t vm, value_t type_val) {
   struct_type_t st = _unwrap_struct_type(vm, type_val);
   if (!st)
-    return create_exception_value(vm, "vm_struct_seal: expected struct type value");
+    return create_exception_value(vm, "expected struct type value");
   _st_seal(st);
   return create_void_value(vm);
 }
@@ -995,7 +996,7 @@ value_t vm_struct_add_prop(vm_t vm, value_t type_val,
                            const char *name, value_t val, bool is_method, bool pub) {
   struct_type_t st = _unwrap_struct_type(vm, type_val);
   if (!st)
-    return create_exception_value(vm, "vm_struct_add_prop: expected struct type value");
+    return create_exception_value(vm, "expected struct type value");
   if (strmap_find(st->props, name))
     return create_exception_value(vm, "duplicate prop '%s' in struct type '%s'",
                                   name, type_get_name((type_t)st));
@@ -1069,13 +1070,13 @@ bool vm_struct_is_prop_pub(vm_t vm, value_t type_val, const char *name) {
 value_t vm_create_struct_value(vm_t vm, value_t type_val, value_t *field_values) {
   struct_type_t st = _unwrap_struct_type(vm, type_val);
   if (!st)
-    return create_exception_value(vm, "vm_create_struct_value: expected struct type value");
+    return create_exception_value(vm, "expected struct type value");
   return _create_struct_value(vm, st, field_values);
 }
 
 value_t vm_create_struct_shadow(vm_t vm, value_t type_val, bool initialized) {
   struct_type_t st = _unwrap_struct_type(vm, type_val);
   if (!st)
-    return create_exception_value(vm, "vm_create_struct_shadow: expected struct type value");
+    return create_exception_value(vm, "expected struct type value");
   return _create_struct_shadow(vm, st, initialized);
 }

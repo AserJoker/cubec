@@ -16,6 +16,7 @@
 #include "engine/tuple_type.h"
 #include "engine/array_type.h"
 #include "engine/slice_type.h"
+#include "cubec/program.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -52,11 +53,18 @@ protected:
     if (tokens) allocator_free(vm_get_allocator(vm), &tokens);
   }
 
-  /* Register a value in current scope under the given name */
-  void _bind(const char *name, value_t val) {
-    scope_t scope = vm_get_current_scope(vm);
-    name_t n = name_create(scope->allocator, val);
-    strmap_insert(scope->names, name, n);
+  /* Parse + run source as a program (declarations & statements) */
+  value_t _run_source(const char *source, bool shadow = false) {
+    allocator_t alloc = vm_get_allocator(vm);
+    vec_t tokens = resolve_token_list(vm, "test.cubec", source);
+    if (!tokens) return NULL;
+    size_t position = 0;
+    node_t node = read_program_node(vm, tokens, &position, "test.cubec");
+    allocator_free(alloc, &tokens);
+    if (!node) return NULL;
+    value_t v = run_program(vm, node, shadow);
+    allocator_free(alloc, &node);
+    return v;
   }
 
   /* Parse a source string into an expression node via lexer→parser */
@@ -75,37 +83,6 @@ protected:
     value_t v = run_expression(vm, node, shadow);
     free_node(node);
     return v;
-  }
-
-  /* Build a Point struct type { x: i32, y: i32 } and bind as "Point" */
-  value_t _make_point_type() {
-    value_t tv = vm_create_struct_type_value(vm, "Point", true, "test");
-    (void)vm_struct_add_field(vm, tv, "x", vm_get_i32_type(vm), true);
-    (void)vm_struct_add_field(vm, tv, "y", vm_get_i32_type(vm), true);
-    (void)vm_struct_seal(vm, tv);
-    _bind("Point", tv);
-    return tv;
-  }
-
-  /* Build a tuple type <i32, f64> and bind as "Pair" */
-  value_t _make_pair_type() {
-    allocator_t alloc = vm_get_allocator(vm);
-    vec_init_t vi = {.auto_dispose = false};
-    vec_t types = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
-    vec_push(types, (type_t)value_get_data(vm_get_i32_type(vm)));
-    vec_push(types, (type_t)value_get_data(vm_get_f64_type(vm)));
-    value_t tv = vm_create_tuple_type_value(vm, types, true);
-    allocator_free(alloc, &types);
-    _bind("Pair", tv);
-    return tv;
-  }
-
-  /* Build an array type [3]i32 and bind as "Triple" */
-  value_t _make_triple_type() {
-    type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
-    value_t tv = vm_create_array_type_value(vm, i32_t, create_i32_value(vm, 3), true);
-    _bind("Triple", tv);
-    return tv;
   }
 };
 
@@ -198,7 +175,7 @@ TEST_F(it_run_initialize_list, anon_positional_mixed_types_tuple) {
  * ================================================================== */
 
 TEST_F(it_run_initialize_list, typed_struct_named_fields_in_order) {
-  _make_point_type();
+  _run_source("struct Point { x: i32; y: i32; };");
   value_t v = _run_expr(".Point{.x = 10, .y = 20}");
   ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STRUCT);
@@ -215,7 +192,7 @@ TEST_F(it_run_initialize_list, typed_struct_named_fields_in_order) {
 
 TEST_F(it_run_initialize_list, typed_struct_named_fields_reordered) {
   /* Provide fields in reverse order; runner must reorder by declaration */
-  _make_point_type();
+  _run_source("struct Point { x: i32; y: i32; };");
   value_t v = _run_expr(".Point{.y = 99, .x = 1}");
   ASSERT_FALSE(value_is_abnormal(v));
 
@@ -229,29 +206,26 @@ TEST_F(it_run_initialize_list, typed_struct_named_fields_reordered) {
 }
 
 TEST_F(it_run_initialize_list, typed_struct_wrong_field_count_error) {
-  _make_point_type();
+  _run_source("struct Point { x: i32; y: i32; };");
   value_t v = _run_expr(".Point{.x = 1}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_struct_unknown_field_error) {
-  _make_point_type();
+  _run_source("struct Point { x: i32; y: i32; };");
   value_t v = _run_expr(".Point{.x = 1, .z = 2}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_struct_positional_on_struct_error) {
-  _make_point_type();
+  _run_source("struct Point { x: i32; y: i32; };");
   value_t v = _run_expr(".Point{1, 2}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_struct_safe_cast_widening) {
   /* i32 value → i64 field: safe_cast allows widening */
-  value_t tv = vm_create_struct_type_value(vm, "Big", true, "test");
-  (void)vm_struct_add_field(vm, tv, "v", vm_get_i64_type(vm), true);
-  (void)vm_struct_seal(vm, tv);
-  _bind("Big", tv);
+  _run_source("struct Big { v: i64; };");
 
   value_t v = _run_expr(".Big{.v = 42}");
   ASSERT_FALSE(value_is_abnormal(v)) << "i32→i64 widening should succeed";
@@ -266,7 +240,7 @@ TEST_F(it_run_initialize_list, typed_struct_safe_cast_widening) {
  * ================================================================== */
 
 TEST_F(it_run_initialize_list, typed_tuple_positional) {
-  _make_pair_type();
+  _run_source("type Pair = <i32, f64>;");
   value_t v = _run_expr(".Pair{42, 3.14}");
   ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TUPLE);
@@ -287,20 +261,20 @@ TEST_F(it_run_initialize_list, typed_tuple_positional) {
 }
 
 TEST_F(it_run_initialize_list, typed_tuple_wrong_count_error) {
-  _make_pair_type();
+  _run_source("type Pair = <i32, f64>;");
   value_t v = _run_expr(".Pair{1}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_tuple_named_fields_error) {
-  _make_pair_type();
+  _run_source("type Pair = <i32, f64>;");
   value_t v = _run_expr(".Pair{.a = 1, .b = 2}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_tuple_incompatible_type_error) {
   /* str → i32 safe_cast fails */
-  _make_pair_type();
+  _run_source("type Pair = <i32, f64>;");
   value_t v = _run_expr(".Pair{\"hello\", 3.14}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
@@ -310,7 +284,7 @@ TEST_F(it_run_initialize_list, typed_tuple_incompatible_type_error) {
  * ================================================================== */
 
 TEST_F(it_run_initialize_list, typed_array_positional) {
-  _make_triple_type();
+  _run_source("type Triple = [3]i32;");
   value_t v = _run_expr(".Triple{10, 20, 30}");
   ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_ARRAY);
@@ -326,13 +300,13 @@ TEST_F(it_run_initialize_list, typed_array_positional) {
 }
 
 TEST_F(it_run_initialize_list, typed_array_wrong_count_error) {
-  _make_triple_type();
+  _run_source("type Triple = [3]i32;");
   value_t v = _run_expr(".Triple{1, 2}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_array_named_fields_error) {
-  _make_triple_type();
+  _run_source("type Triple = [3]i32;");
   value_t v = _run_expr(".Triple{.a = 1, .b = 2, .c = 3}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
@@ -363,7 +337,7 @@ TEST_F(it_run_initialize_list, anon_empty_shadow) {
 }
 
 TEST_F(it_run_initialize_list, typed_struct_shadow) {
-  _make_point_type();
+  _run_source("struct Point { x: i32; y: i32; };");
   value_t v = _run_expr(".Point{.x = 1, .y = 2}", true);
   ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
@@ -371,7 +345,7 @@ TEST_F(it_run_initialize_list, typed_struct_shadow) {
 }
 
 TEST_F(it_run_initialize_list, typed_tuple_shadow) {
-  _make_pair_type();
+  _run_source("type Pair = <i32, f64>;");
   value_t v = _run_expr(".Pair{1, 2.5}", true);
   ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
@@ -379,7 +353,7 @@ TEST_F(it_run_initialize_list, typed_tuple_shadow) {
 }
 
 TEST_F(it_run_initialize_list, typed_array_shadow) {
-  _make_triple_type();
+  _run_source("type Triple = [3]i32;");
   value_t v = _run_expr(".Triple{1, 2, 3}", true);
   ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
@@ -392,7 +366,7 @@ TEST_F(it_run_initialize_list, typed_array_shadow) {
 
 TEST_F(it_run_initialize_list, typed_i32_unsupported_error) {
   /* i32 is not a composite type — initialize_list should fail */
-  _bind("MyInt", vm_get_i32_type(vm));
+  _run_source("type MyInt = i32;");
   value_t v = _run_expr(".MyInt{1}");
   EXPECT_TRUE(value_is_abnormal(v));
 }
@@ -403,5 +377,21 @@ TEST_F(it_run_initialize_list, typed_i32_unsupported_error) {
 
 TEST_F(it_run_initialize_list, typed_undeclared_type_error) {
   value_t v = _run_expr(".NoSuchType{.x = 1}");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
+
+/* ---- Generic type without type args in initialize_list ---- */
+
+TEST_F(it_run_initialize_list, generic_type_without_args_error) {
+  /* struct Test[T] { id: T; }; — .Test{.id = 42} should fail because
+   * Test is a generic type, not a concrete type. */
+  _run_source("struct Test[T] { id: T; };");
+  value_t v = _run_expr(".Test{.id = 42}");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
+
+TEST_F(it_run_initialize_list, integer_as_type_error) {
+  /* .123{} — integer literal is not a type, should return exception */
+  value_t v = _run_expr(".123{}");
   EXPECT_TRUE(value_is_abnormal(v));
 }

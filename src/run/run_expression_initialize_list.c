@@ -5,6 +5,8 @@
 #include "engine/value.h"
 #include "engine/type.h"
 #include "engine/struct_type.h"
+#include "engine/union_type.h"
+#include "engine/cunion_type.h"
 #include "engine/tuple_type.h"
 #include "engine/array_type.h"
 #include "cubec/expression_initialize_list.h"
@@ -62,7 +64,7 @@ static value_t _eval_positional_items_with_spread(vm_t vm, vec_t items,
       vec_t expanded = value_spread(vm, inner);
       if (!expanded)
         return create_exception_value(vm,
-            "cannot spread value of type '%s' in initialize list",
+            "cannot spread value of type '%s'",
             type_get_name(value_get_type(inner)));
       size_t exp_count = vec_get_size(expanded);
       for (size_t j = 0; j < exp_count; j++) {
@@ -95,7 +97,7 @@ static value_t _build_typed_struct(vm_t vm, value_t type_val,
 
   if (item_count != field_count)
     return create_exception_value(vm,
-                                  "initialize_list: struct '%s' expects %zu fields, got %zu",
+                                  "struct '%s' expects %zu fields, got %zu",
                                   type_get_name((type_t)value_get_data(type_val)),
                                   field_count, item_count);
 
@@ -107,7 +109,7 @@ static value_t _build_typed_struct(vm_t vm, value_t type_val,
   allocator_t alloc = vm_get_allocator(vm);
   value_t *ordered = (value_t *)allocator_alloc(alloc, field_count * sizeof(value_t));
   if (!ordered)
-    return create_exception_value(vm, "initialize_list: out of memory");
+    return create_exception_value(vm, "out of memory");
   for (size_t i = 0; i < field_count; i++)
     ordered[i] = NULL;
 
@@ -121,7 +123,7 @@ static value_t _build_typed_struct(vm_t vm, value_t type_val,
         if (ordered[j]) ordered[j] = NULL;
       allocator_free(alloc, &ordered);
       return create_exception_value(vm,
-                                    "initialize_list: struct '%s' has no field '%s'",
+                                    "struct '%s' has no field '%s'",
                                     type_get_name((type_t)value_get_data(type_val)),
                                     name);
     }
@@ -172,7 +174,7 @@ static value_t _build_typed_tuple(vm_t vm, tuple_type_t tt,
   if (count != tuple_fc) {
     allocator_free(alloc, &value_vec);
     return create_exception_value(vm,
-                                  "initialize_list: tuple expects %zu elements, got %zu",
+                                  "tuple expects %zu elements, got %zu",
                                   (size_t)tuple_fc, count);
   }
 
@@ -184,7 +186,7 @@ static value_t _build_typed_tuple(vm_t vm, tuple_type_t tt,
   value_t *elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
   if (!elems) {
     allocator_free(alloc, &value_vec);
-    return create_exception_value(vm, "initialize_list: out of memory");
+    return create_exception_value(vm, "out of memory");
   }
 
   for (size_t i = 0; i < count; i++) {
@@ -227,7 +229,7 @@ static value_t _build_typed_array(vm_t vm, array_type_t at,
   if (count != array_count) {
     allocator_free(alloc, &value_vec);
     return create_exception_value(vm,
-                                  "initialize_list: array expects %zu elements, got %zu",
+                                  "array expects %zu elements, got %zu",
                                   (size_t)array_count, count);
   }
 
@@ -240,7 +242,7 @@ static value_t _build_typed_array(vm_t vm, array_type_t at,
   value_t *elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
   if (!elems) {
     allocator_free(alloc, &value_vec);
-    return create_exception_value(vm, "initialize_list: out of memory");
+    return create_exception_value(vm, "out of memory");
   }
 
   for (size_t i = 0; i < count; i++) {
@@ -258,6 +260,80 @@ static value_t _build_typed_array(vm_t vm, array_type_t at,
   allocator_free(alloc, &elems);
   allocator_free(alloc, &value_vec);
   return result;
+}
+
+/* ---- typed union: one named field, safe_cast the value ---- */
+
+static value_t _build_typed_union(vm_t vm, value_t type_val,
+                                   cubec_expression_initialize_list_t node,
+                                   bool shadow) {
+  size_t item_count = vec_get_size(node->items);
+
+  if (!node->is_field || item_count != 1)
+    return create_exception_value(vm,
+                                  "union '%s' requires exactly one named field",
+                                  type_get_name((type_t)value_get_data(type_val)));
+
+  /* shadow path */
+  if (shadow)
+    return vm_create_union_shadow(vm, type_val, true);
+
+  /* evaluate the single field */
+  node_t item = (node_t)vec_get(node->items, 0);
+  const char *name = _field_name(item);
+  field_info_t fi = vm_union_find_field(vm, type_val, name);
+  if (!fi)
+    return create_exception_value(vm,
+                                  "union '%s' has no field '%s'",
+                                  type_get_name((type_t)value_get_data(type_val)),
+                                  name);
+
+  value_t v = _eval_field_value(vm, item, false);
+  if (value_is_abnormal(v))
+    return v;
+
+  value_t cast = value_safe_cast(vm, v, field_info_get_type(fi));
+  if (value_is_abnormal(cast))
+    return cast;
+
+  return vm_create_union_value(vm, type_val, name, cast);
+}
+
+/* ---- typed cunion: one named field, safe_cast the value ---- */
+
+static value_t _build_typed_cunion(vm_t vm, value_t type_val,
+                                    cubec_expression_initialize_list_t node,
+                                    bool shadow) {
+  size_t item_count = vec_get_size(node->items);
+
+  if (!node->is_field || item_count != 1)
+    return create_exception_value(vm,
+                                  "cunion '%s' requires exactly one named field",
+                                  type_get_name((type_t)value_get_data(type_val)));
+
+  /* shadow path */
+  if (shadow)
+    return vm_create_cunion_shadow(vm, type_val, true);
+
+  /* evaluate the single field */
+  node_t item = (node_t)vec_get(node->items, 0);
+  const char *name = _field_name(item);
+  field_info_t fi = vm_cunion_find_field(vm, type_val, name);
+  if (!fi)
+    return create_exception_value(vm,
+                                  "cunion '%s' has no field '%s'",
+                                  type_get_name((type_t)value_get_data(type_val)),
+                                  name);
+
+  value_t v = _eval_field_value(vm, item, false);
+  if (value_is_abnormal(v))
+    return v;
+
+  value_t cast = value_safe_cast(vm, v, field_info_get_type(fi));
+  if (value_is_abnormal(cast))
+    return cast;
+
+  return vm_create_cunion_value(vm, type_val, name, cast);
 }
 
 /* ---- anonymous struct (named fields, NULL name) ---- */
@@ -280,7 +356,7 @@ static value_t _build_anon_struct(vm_t vm,
   if (item_count > 0) {
     field_vals = (value_t *)allocator_alloc(alloc, item_count * sizeof(value_t));
     if (!field_vals)
-      return create_exception_value(vm, "initialize_list: out of memory");
+      return create_exception_value(vm, "out of memory");
   }
 
   for (size_t i = 0; i < item_count; i++) {
@@ -350,7 +426,7 @@ static value_t _build_anon_tuple(vm_t vm,
   if (count == 0) {
     allocator_free(alloc, &value_vec);
     allocator_free(alloc, &type_vec);
-    return create_exception_value(vm, "initialize_list: empty anonymous tuple");
+    return create_exception_value(vm, "empty tuple initializer");
   }
 
   value_t tv = vm_create_tuple_type_value(vm, type_vec, true);
@@ -369,7 +445,7 @@ static value_t _build_anon_tuple(vm_t vm,
   value_t *elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
   if (!elems) {
     allocator_free(alloc, &value_vec);
-    return create_exception_value(vm, "initialize_list: out of memory");
+    return create_exception_value(vm, "out of memory");
   }
   for (size_t i = 0; i < count; i++)
     elems[i] = (value_t)vec_get(value_vec, i);
@@ -396,32 +472,42 @@ value_t run_expression_initialize_list(vm_t vm, node_t node, bool shadow) {
     if (value_is_abnormal(type_val))
       return type_val;
 
-    type_t concrete = (type_t)value_get_data(type_val);
-    if (!concrete)
+    /* type_val must be a TYPE_KIND_TYPE value wrapping a concrete type_t.
+     * Generic type names (TYPE_KIND_GENERIC) are not instantiable without
+     * explicit type arguments. */
+    if (type_get_kind(value_get_type(type_val)) != TYPE_KIND_TYPE)
       return create_exception_value(vm,
-                                    "initialize_list: type expression did not resolve to a type");
+                                    "expected a concrete type before '{...}', "
+                                    "generic type '%s' requires explicit type arguments",
+                                    type_get_name(value_get_type(type_val)));
+
+    type_t concrete = (type_t)value_get_data(type_val);
     type_kind_t kind = type_get_kind(concrete);
 
     switch (kind) {
     case TYPE_KIND_STRUCT:
       if (!init_list->is_field)
         return create_exception_value(vm,
-                                      "initialize_list: struct requires named fields, got positional");
+                                      "struct requires named fields, got positional values");
       return _build_typed_struct(vm, type_val, init_list, shadow);
+    case TYPE_KIND_UNION:
+      return _build_typed_union(vm, type_val, init_list, shadow);
+    case TYPE_KIND_CUNION:
+      return _build_typed_cunion(vm, type_val, init_list, shadow);
     case TYPE_KIND_TUPLE:
       if (init_list->is_field)
         return create_exception_value(vm,
-                                      "initialize_list: tuple requires positional elements, got named fields");
+                                      "tuple requires positional values, got named fields");
       return _build_typed_tuple(vm, (tuple_type_t)concrete, init_list, shadow);
     case TYPE_KIND_ARRAY:
       if (init_list->is_field)
         return create_exception_value(vm,
-                                      "initialize_list: array requires positional elements, got named fields");
+                                      "array requires positional values, got named fields");
       return _build_typed_array(vm, (array_type_t)concrete, init_list, shadow);
     default:
       return create_exception_value(vm,
-                                    "initialize_list: type '%s' (kind %d) does not support initialize_list",
-                                    type_get_name(concrete), kind);
+                                    "type '%s' does not support initializer syntax",
+                                    type_get_name(concrete));
     }
   }
 

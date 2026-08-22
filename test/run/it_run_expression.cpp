@@ -18,6 +18,7 @@
 #include "engine/struct_type.h"
 #include "engine/slice_type.h"
 #include "engine/array_type.h"
+#include "cubec/program.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/literal_nil.h"
@@ -75,6 +76,20 @@ protected:
     scope_t scope = vm_get_current_scope(vm);
     name_t n = name_create(scope->allocator, val);
     strmap_insert(scope->names, name, n);
+  }
+
+  /* Parse + run source as a program (declarations & statements) */
+  value_t _run_source(const char *source, bool shadow = false) {
+    allocator_t alloc = vm_get_allocator(vm);
+    vec_t tokens = resolve_token_list(vm, "test.cubec", source);
+    if (!tokens) return NULL;
+    size_t position = 0;
+    node_t node = read_program_node(vm, tokens, &position, "test.cubec");
+    allocator_free(alloc, &tokens);
+    if (!node) return NULL;
+    value_t v = run_program(vm, node, shadow);
+    allocator_free(alloc, &node);
+    return v;
   }
 
   /* Parse a source string into an expression node via lexer→parser */
@@ -412,19 +427,8 @@ TEST_F(it_run_expression, addr_of_value) {
  * ================================================================== */
 
 TEST_F(it_run_expression, member_get_struct_field) {
-  /* Build a struct type Point { x: i32, y: i32 } and a value */
-  value_t tv = vm_create_struct_type_value(vm, "Point", true, "test");
-  (void)vm_struct_add_field(vm, tv, "x", vm_get_i32_type(vm), true);
-  (void)vm_struct_add_field(vm, tv, "y", vm_get_i32_type(vm), true);
-  (void)vm_struct_seal(vm, tv);
-
-  vm_set_current_module_id(vm, "test");
-
-  value_t vx = create_i32_value(vm, 10);
-  value_t vy = create_i32_value(vm, 20);
-  value_t fields[] = {vx, vy};
-  value_t sv = vm_create_struct_value(vm, tv, fields);
-  _bind("pt", sv);
+  /* Declare struct Point and create a value via source */
+  _run_source("struct Point { pub x: i32; pub y: i32; }; var pt = .Point{.x = 10, .y = 20};");
 
   /* Access pt.x */
   value_t v = _run_expr("pt.x");

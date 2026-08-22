@@ -163,6 +163,13 @@ callable_type_t callable_type_create(allocator_t allocator, vec_t param_types,
   for (uint64_t i = 0; i < pcount; i++) {
     type_t pt = (type_t)vec_get(param_types, (size_t)i);
     const char *pn = type_get_name(pt);
+    if (!pn) {
+      switch (type_get_kind(pt)) {
+      case TYPE_KIND_STRUCT: pn = "struct <anonymous>"; break;
+      case TYPE_KIND_UNION:  pn = "union <anonymous>"; break;
+      default:               pn = "<anonymous>"; break;
+      }
+    }
     size_t pn_len = strlen(pn);
     /* resize if needed */
     if (pos + pn_len + 4 >= name_cap) {
@@ -201,6 +208,13 @@ callable_type_t callable_type_create(allocator_t allocator, vec_t param_types,
   name[pos++] = ' ';
 
   const char *rn = type_get_name(return_type);
+  if (!rn) {
+    switch (type_get_kind(return_type)) {
+    case TYPE_KIND_STRUCT: rn = "struct <anonymous>"; break;
+    case TYPE_KIND_UNION:  rn = "union <anonymous>"; break;
+    default:               rn = "<anonymous>"; break;
+    }
+  }
   size_t rn_len = strlen(rn);
   if (pos + rn_len + 1 >= name_cap) {
     name_cap *= 2;
