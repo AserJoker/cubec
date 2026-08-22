@@ -436,3 +436,55 @@ TEST_F(it_run_struct_union, generic_infer_multi_param_struct) {
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(v));
 }
+
+/* ---- Struct implement interface ---- */
+
+TEST_F(it_run_struct_union, struct_implement_interface_valid) {
+  /* struct Counter implement Printable { value: i32; func to_string(): *u8 { return 0; } };
+   * Should succeed — Counter has the to_string method. */
+  value_t result = _run_source(
+      "interface Printable { func to_string(): *u8; } "
+      "struct Counter implement Printable { value: i32; func to_string(): *u8 { return 0; } };",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result))
+      << (value_is_abnormal(result) ? (const char *)value_get_data(result) : "");
+}
+
+TEST_F(it_run_struct_union, struct_implement_interface_missing_method) {
+  /* struct Bad implement Printable { value: i32; };
+   * Should fail — Bad lacks to_string method. */
+  _run_source("interface Printable { func to_string(): *u8; }");
+
+  value_t result = _run_source(
+      "interface Printable { func to_string(): *u8; } "
+      "struct Bad implement Printable { value: i32; };");
+  EXPECT_TRUE(value_is_abnormal(result));
+}
+
+TEST_F(it_run_struct_union, struct_implement_non_interface_error) {
+  /* struct Foo implement i32 { x: i32; };
+   * Should fail — i32 is not an interface. */
+  value_t result = _run_source(
+      "struct Foo implement i32 { x: i32; };");
+  EXPECT_TRUE(value_is_abnormal(result));
+}
+
+TEST_F(it_run_struct_union, union_implement_interface_valid) {
+  /* union Option implement Printable { value: i32; empty: void; func to_string(): *u8 { return 0; } };
+   * Should succeed — Option has to_string. */
+  value_t result = _run_source(
+      "interface Printable { func to_string(): *u8; } "
+      "union Option implement Printable { value: i32; empty: void; func to_string(): *u8 { return 0; } };",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result))
+      << (value_is_abnormal(result) ? (const char *)value_get_data(result) : "");
+}
+
+TEST_F(it_run_struct_union, union_implement_interface_missing_method) {
+  /* union Bad implement Printable { value: i32; empty: void; };
+   * Should fail — Bad lacks to_string. */
+  value_t result = _run_source(
+      "interface Printable { func to_string(): *u8; } "
+      "union Bad implement Printable { value: i32; empty: void; };");
+  EXPECT_TRUE(value_is_abnormal(result));
+}

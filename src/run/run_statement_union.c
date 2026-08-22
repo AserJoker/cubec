@@ -11,6 +11,7 @@
 #include "engine/generic_param.h"
 #include "engine/pack_type.h"
 #include "engine/union_type.h"
+#include "engine/interface_type.h"
 #include "cubec/generic_param.h"
 #include "cubec/statement_union.h"
 #include "cubec/declaration_union.h"
@@ -130,6 +131,44 @@ static vec_t _build_generic_params(vm_t vm, vec_t ast_params,
   }
 
   return params_vec;
+}
+
+/* ---- helper: validate implement clause against sealed union type ---- */
+
+static value_t _check_implements(vm_t vm, value_t type_val, vec_t implements,
+                                  const char *type_category, const char *type_name) {
+  if (!implements)
+    return create_void_value(vm);
+
+  size_t ic = vec_get_size(implements);
+  for (size_t i = 0; i < ic; i++) {
+    node_t iface_node = (node_t)vec_get(implements, i);
+    value_t iface_val = run_expression(vm, iface_node, false);
+    if (value_is_abnormal(iface_val))
+      return iface_val;
+
+    if (type_get_kind(value_get_type(iface_val)) != TYPE_KIND_TYPE)
+      return create_exception_value(vm,
+          "%s '%s' implement clause must refer to an interface, got '%s'",
+          type_category, type_name, type_get_name(value_get_type(iface_val)));
+
+    type_t iface_type = (type_t)value_get_data(iface_val);
+    if (type_get_kind(iface_type) != TYPE_KIND_INTERFACE)
+      return create_exception_value(vm,
+          "%s '%s' implement clause must refer to an interface, got '%s'",
+          type_category, type_name, type_get_name(iface_type));
+
+    value_t ext = value_extends(vm, type_val, iface_val);
+    if (value_is_abnormal(ext))
+      return ext;
+
+    if (!value_is_shadow(ext) && !(*(bool *)value_get_data(ext)))
+      return create_exception_value(vm,
+          "%s '%s' does not implement interface '%s'",
+          type_category, type_name, type_get_name(iface_type));
+  }
+
+  return create_void_value(vm);
 }
 
 /* ---- helper: add members to a union type value ---- */
@@ -301,6 +340,12 @@ value_t run_statement_union(vm_t vm, node_t node, bool shadow) {
   value_t seal_result = vm_union_seal(vm, type_val);
   if (value_is_abnormal(seal_result))
     return seal_result;
+
+  /* validate implement clause */
+  value_t impl_result = _check_implements(vm, type_val, stmt->implements,
+                                           "union", name);
+  if (value_is_abnormal(impl_result))
+    return impl_result;
 
   /* bind the name in current scope */
   _bind_name(vm, type_val, name);
