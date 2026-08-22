@@ -45,6 +45,10 @@ value_t run_expression_alignof(vm_t vm, node_t node, bool shadow);
 
 value_t run_expression_ternary(vm_t vm, node_t node, bool shadow);
 
+/* ---- Slice runner ---- */
+
+value_t run_expression_slice(vm_t vm, node_t node, bool shadow);
+
 /* ---- Wildcard runner ---- */
 
 value_t run_expression_wildcard(vm_t vm, node_t node, bool shadow);

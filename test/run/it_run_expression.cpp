@@ -852,3 +852,114 @@ TEST_F(it_run_expression, ternary_shadow_mode) {
   EXPECT_TRUE(value_is_shadow(v));
   ASSERT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
 }
+
+/* ==================================================================
+ *  Slice expression — host[start:length]
+ * ================================================================== */
+
+TEST_F(it_run_expression, slice_array_with_start_and_length) {
+  /* Create array [3]i32 { 10, 20, 30 } */
+  type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
+  array_type_t at = array_type_create(vm, i32_t, create_i32_value(vm, 3), true);
+  vec_push(vm_get_types(vm), at);
+
+  value_t e0 = create_i32_value(vm, 10);
+  value_t e1 = create_i32_value(vm, 20);
+  value_t e2 = create_i32_value(vm, 30);
+  value_t elems[] = {e0, e1, e2};
+  value_t av = create_array_value(vm, at, elems);
+  _bind("arr", av);
+
+  /* arr[1:2] should be a slice of [20, 30] */
+  value_t v = _run_expr("arr[1:2]");
+  ASSERT_FALSE(value_is_abnormal(v)) << "slice on array failed";
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_SLICE);
+
+  /* Verify slice contents via subscript */
+  struct slice_data_t *sd = (struct slice_data_t *)value_get_data(v);
+  EXPECT_EQ(sd->len, 2u);
+
+  value_t idx0 = create_i32_value(vm, 0);
+  value_t elem0 = value_get_item(vm, v, idx0);
+  ASSERT_FALSE(value_is_abnormal(elem0));
+  EXPECT_EQ(*(int32_t *)value_get_data(elem0), 20);
+
+  value_t idx1 = create_i32_value(vm, 1);
+  value_t elem1 = value_get_item(vm, v, idx1);
+  ASSERT_FALSE(value_is_abnormal(elem1));
+  EXPECT_EQ(*(int32_t *)value_get_data(elem1), 30);
+}
+
+TEST_F(it_run_expression, slice_array_omit_length) {
+  /* arr[1:] — length derived from array count minus start */
+  type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
+  array_type_t at = array_type_create(vm, i32_t, create_i32_value(vm, 4), true);
+  vec_push(vm_get_types(vm), at);
+
+  value_t elems[] = {
+      create_i32_value(vm, 10), create_i32_value(vm, 20),
+      create_i32_value(vm, 30), create_i32_value(vm, 40)};
+  value_t av = create_array_value(vm, at, elems);
+  _bind("arr", av);
+
+  value_t v = _run_expr("arr[2:]");
+  ASSERT_FALSE(value_is_abnormal(v));
+  struct slice_data_t *sd = (struct slice_data_t *)value_get_data(v);
+  EXPECT_EQ(sd->len, 2u);
+}
+
+TEST_F(it_run_expression, slice_non_slicable_type_error) {
+  value_t i32_val = create_i32_value(vm, 42);
+  _bind("num", i32_val);
+
+  value_t v = _run_expr("num[0:1]");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
+
+TEST_F(it_run_expression, slice_start_not_integer_error) {
+  type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
+  array_type_t at = array_type_create(vm, i32_t, create_i32_value(vm, 2), true);
+  vec_push(vm_get_types(vm), at);
+
+  value_t elems[] = {create_i32_value(vm, 1), create_i32_value(vm, 2)};
+  value_t av = create_array_value(vm, at, elems);
+  _bind("arr", av);
+
+  /* "hello" as start — not an integer */
+  value_t v = _run_expr("arr[\"hello\":1]");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
+
+TEST_F(it_run_expression, slice_negative_start_error) {
+  type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
+  array_type_t at = array_type_create(vm, i32_t, create_i32_value(vm, 3), true);
+  vec_push(vm_get_types(vm), at);
+
+  value_t elems[] = {
+      create_i32_value(vm, 10), create_i32_value(vm, 20),
+      create_i32_value(vm, 30)};
+  value_t av = create_array_value(vm, at, elems);
+  _bind("arr", av);
+  _bind("neg", create_i32_value(vm, -1));
+
+  /* Negative start index should be rejected */
+  value_t v = _run_expr("arr[neg:1]");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
+
+TEST_F(it_run_expression, slice_negative_length_error) {
+  type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
+  array_type_t at = array_type_create(vm, i32_t, create_i32_value(vm, 3), true);
+  vec_push(vm_get_types(vm), at);
+
+  value_t elems[] = {
+      create_i32_value(vm, 10), create_i32_value(vm, 20),
+      create_i32_value(vm, 30)};
+  value_t av = create_array_value(vm, at, elems);
+  _bind("arr", av);
+  _bind("neg", create_i32_value(vm, -2));
+
+  /* Negative length should be rejected */
+  value_t v = _run_expr("arr[0:neg]");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
