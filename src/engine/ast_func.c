@@ -152,6 +152,7 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
   /* ---- Save caller state ---- */
   scope_t caller_scope = vm_get_current_scope(vm);
   scope_t prev_root = vm_set_root_scope(vm, af->base.root_scope);
+  value_t prev_func = vm_set_current_func(vm, fn);
 
   /* ---- Build scope chain: root → closure → template → args → body ----
    *  closure_scope always exists (created in create_ast_func_value / clone).
@@ -271,6 +272,7 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
 
       vm_set_scope(vm, caller_scope);
       vm_set_root_scope(vm, prev_root);
+      vm_set_current_func(vm, prev_func);
       closure->parent = saved_closure_parent;
       return return_value;
     }
@@ -288,6 +290,7 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
     /* Restore caller state */
     vm_set_scope(vm, caller_scope);
     vm_set_root_scope(vm, prev_root);
+    vm_set_current_func(vm, prev_func);
     closure->parent = saved_closure_parent;
     return return_value;
   }
@@ -306,6 +309,7 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
 
     vm_set_scope(vm, caller_scope);
     vm_set_root_scope(vm, prev_root);
+    vm_set_current_func(vm, prev_func);
     closure->parent = saved_closure_parent;
     return return_value;
   }
@@ -319,6 +323,7 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
         vm_pop_scope(vm);
       vm_set_scope(vm, caller_scope);
       vm_set_root_scope(vm, prev_root);
+      vm_set_current_func(vm, prev_func);
       closure->parent = saved_closure_parent;
       return create_exception_value(
           vm, "non-void function '%s' missing return statement",
@@ -337,6 +342,7 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
     /* Restore caller state */
     vm_set_scope(vm, caller_scope);
     vm_set_root_scope(vm, prev_root);
+    vm_set_current_func(vm, prev_func);
     closure->parent = saved_closure_parent;
     return return_value;
   }

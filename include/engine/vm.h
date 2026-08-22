@@ -195,6 +195,14 @@ void vm_pop_frame(vm_t self);
  *  Index 0 = bottom (oldest), last = top (most recent). */
 vec_t vm_get_call_stack(vm_t self);
 
+/** @brief Get the callable value currently being executed (borrowed ref).
+ *  Returns NULL when not inside a function body. */
+value_t vm_get_current_func(vm_t self);
+
+/** @brief Set the current callable value being executed.
+ *  Returns the previous value (for restore). */
+value_t vm_set_current_func(vm_t self, value_t fn);
+
 /** @brief Get the diagnostic list (owned by vm).
  *  Used by parser, name_collector, and run layers to report diagnostics. */
 diagnostic_list_t vm_get_diagnostics(vm_t self);

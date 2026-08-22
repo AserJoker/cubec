@@ -106,6 +106,7 @@ struct _vm_t {
   vec_t types;                /* global type_t table (auto-dispose) */
   const char
       *current_module_id; /* borrowed: current module path or "<builtin>" */
+  value_t current_func;  /* borrowed: the callable value currently being executed */
   vec_t call_stack;       /* vec of call_frame_t (auto_dispose=true, owned
                              name/message) */
   diagnostic_list_t diagnostics; /* owned: diagnostic collection */
@@ -116,6 +117,7 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm_t vm = (vm_t)self;
   vm->allocator = allocator;
   vm->current_module_id = "<builtin>";
+  vm->current_func = NULL;
 
   strmap_init_t sm_init = {.value_auto_dispose = true};
   vm->modules =
@@ -748,6 +750,14 @@ class_t g_call_frame_class = {
 };
 
 /* ---- Call stack ---- */
+
+value_t vm_get_current_func(vm_t self) { return self->current_func; }
+
+value_t vm_set_current_func(vm_t self, value_t fn) {
+  value_t prev = self->current_func;
+  self->current_func = fn;
+  return prev;
+}
 
 void vm_push_frame(vm_t self, const char *name, const char *message) {
   if (!self->call_stack) {
