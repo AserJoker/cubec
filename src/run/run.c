@@ -58,6 +58,8 @@ value_t run_expression(vm_t vm, node_t node, bool shadow) {
     result = run_expression_sizeof(vm, node, shadow); break;
   case CUBEC_NODE_EXPRESSION_ALIGNOF:
     result = run_expression_alignof(vm, node, shadow); break;
+  case CUBEC_NODE_EXPRESSION_TERNARY:
+    result = run_expression_ternary(vm, node, shadow); break;
   /* type declarations (compatible with expression dispatch) */
   case CUBEC_NODE_DECLARATION_ARRAY:
     result = run_declaration_array(vm, node, shadow); break;

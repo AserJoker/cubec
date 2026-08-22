@@ -800,3 +800,55 @@ TEST_F(it_run_expression, alignof_type_expr) {
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
   EXPECT_EQ(*(uint64_t *)value_get_data(v), 1u);
 }
+
+/* ==================================================================
+ *  Ternary expression
+ * ================================================================== */
+
+TEST_F(it_run_expression, ternary_true_branch) {
+  value_t v = _run_expr("true ? 1 : 2");
+  ASSERT_FALSE(value_is_abnormal(v));
+  ASSERT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 1);
+}
+
+TEST_F(it_run_expression, ternary_false_branch) {
+  value_t v = _run_expr("false ? 1 : 2");
+  ASSERT_FALSE(value_is_abnormal(v));
+  ASSERT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 2);
+}
+
+TEST_F(it_run_expression, ternary_with_comparison) {
+  value_t v = _run_expr("3 > 2 ? 10 : 20");
+  ASSERT_FALSE(value_is_abnormal(v));
+  ASSERT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 10);
+}
+
+TEST_F(it_run_expression, ternary_non_bool_condition_error) {
+  /* condition is i32, not convertible to bool */
+  value_t v = _run_expr("1 ? 2 : 3");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
+
+TEST_F(it_run_expression, ternary_type_mismatch_error) {
+  /* consequent is i32, alternate is str — different types */
+  value_t v = _run_expr("true ? 1 : \"hello\"");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
+
+TEST_F(it_run_expression, ternary_same_type_different_values) {
+  value_t v = _run_expr("false ? 100 : 200");
+  ASSERT_FALSE(value_is_abnormal(v));
+  ASSERT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 200);
+}
+
+TEST_F(it_run_expression, ternary_shadow_mode) {
+  /* shadow mode: both branches evaluated for type checking */
+  value_t v = _run_expr("true ? 1 : 2", true);
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_TRUE(value_is_shadow(v));
+  ASSERT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+}
