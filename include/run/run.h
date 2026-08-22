@@ -89,6 +89,11 @@ value_t run_statement_union(vm_t vm, node_t node, bool shadow);
 value_t run_statement_cunion(vm_t vm, node_t node, bool shadow);
 value_t run_statement_interface(vm_t vm, node_t node, bool shadow);
 
+/* ---- Enum runners ---- */
+
+value_t run_statement_enum(vm_t vm, node_t node, bool shadow);
+value_t run_declaration_enum(vm_t vm, node_t node, bool shadow);
+
 #ifdef __cplusplus
 }
 #endif

@@ -79,6 +79,8 @@ value_t run_expression(vm_t vm, node_t node, bool shadow) {
     result = run_declaration_union(vm, node, shadow); break;
   case CUBEC_NODE_DECLARATION_INTERFACE:
     result = run_declaration_interface(vm, node, shadow); break;
+  case CUBEC_NODE_DECLARATION_ENUM:
+    result = run_declaration_enum(vm, node, shadow); break;
   case CUBEC_NODE_EXPRESSION_WILDCARD:
     result = run_expression_wildcard(vm, node, shadow); break;
   case CUBEC_NODE_EXPRESSION_SPREAD:
@@ -135,6 +137,8 @@ value_t run_statement(vm_t vm, node_t node, bool shadow) {
     return run_statement_cunion(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_INTERFACE:
     return run_statement_interface(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_ENUM:
+    return run_statement_enum(vm, node, shadow);
   default:
     if (shadow) {
       diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
