@@ -29,13 +29,18 @@
 #include "cubec/declaration_slice.h"
 #include "cubec/declaration_callable.h"
 #include "cubec/function_argument.h"
+#include "engine/pack_type.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_nil.h"
 #include "cubec/expression_binary.h"
 #include "cubec/statement_return.h"
 #include "cubec/statement_block.h"
 #include "cubec/expression_deref.h"
+#include "cubec/expression_spread.h"
 #include "cubec/generic_param.h"
+#include "cubec/program.h"
+#include "cubec/token.h"
+#include "run/run.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -131,6 +136,52 @@ protected:
   value_t _type_val(vm_t vm, type_t t) {
     type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
     return vm_create_value_ref(vm, type_type, t, NULL);
+  }
+
+  /* Create a pack (rest) function argument: ...name:type */
+  node_t _create_pack_argument(vm_t vm, location_t loc, const char *name,
+                                node_t type) {
+    allocator_t alloc = vm_get_allocator(vm);
+    node_t name_node = create_literal_identifier(vm, loc, name);
+    cubec_function_argument_init_t init = {
+        .location = loc,
+        .identifier = name_node,
+        .type = type,
+        .is_rest = true,
+    };
+    return (node_t)allocator_create(alloc, &g_cubec_function_argument_class,
+                                    &init);
+  }
+
+  /* Create a generic_param_t (pack param, e.g. ...T) */
+  generic_param_t _make_pack_param(vm_t vm, const char *name) {
+    allocator_t alloc = vm_get_allocator(vm);
+    type_t pack_type = (type_t)value_get_data(vm_get_pack_type(vm));
+    vec_init_t vi = {.auto_dispose = true};
+    vec_t extends = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
+    generic_param_t gp = generic_param_create(alloc, name, pack_type, extends, true);
+    allocator_free(alloc, &extends);
+    return gp;
+  }
+
+  /* ---- End-to-end helpers: source → tokenize → parse → run ---- */
+
+  value_t _run_source(vm_t vm, const char *source, node_t *out_node = NULL,
+                      bool shadow = false) {
+    allocator_t alloc = vm_get_allocator(vm);
+    vec_t tokens = resolve_token_list(vm, "test.cubec", source);
+    if (!tokens) return NULL;
+    size_t position = 0;
+    node_t node = read_program_node(vm, tokens, &position, "test.cubec");
+    allocator_free(alloc, &tokens);
+    if (!node) return NULL;
+    value_t v = run_program(vm, node, shadow);
+    if (out_node) {
+      *out_node = node; /* caller is responsible for freeing after vm_dispose */
+    } else {
+      allocator_free(alloc, &node);
+    }
+    return v;
   }
 };
 
@@ -1039,4 +1090,236 @@ TEST_F(it_generic_inference, enum_underlying_type_inferred) {
   allocator_free(alloc, &ctx);
 
   vm_dispose(vm, allocator);
+}
+
+/* ================================================================== */
+/*  Pack inference tests                                               */
+/* ================================================================== */
+
+/* ---- Pack scenario 1: func foo[...T](...args:T) — pack collects arg types ---- */
+
+TEST_F(it_generic_inference, pack_collects_arg_types) {
+  /* func foo[...T](...args: T) — calling foo(1, true, "hi") should
+   * infer T as [i32, bool, str] (the pack collects remaining arg types) */
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+
+  /* Declare via source (end-to-end) */
+  value_t decl_result = _run_source(vm,
+      "func foo[...T](...args: T): void {};", &ast_node);
+  if (value_is_abnormal(decl_result)) {
+    if (ast_node) allocator_free(alloc, &ast_node);
+    FAIL() << "Declaration failed";
+  }
+
+  /* Look up the generic function */
+  scope_t scope = vm_get_current_scope(vm);
+  name_t foo_name = scope_lookup(scope, "foo");
+  ASSERT_NE(foo_name, nullptr);
+  ASSERT_NE(foo_name->ref, nullptr);
+  value_t gen_val = foo_name->ref;
+
+  /* Call foo(42, true, "hi") — T should be inferred as [i32, bool, str] */
+  int32_t ival = 42;
+  bool bval = true;
+  const char *sval = "hi";
+  value_t call_argv[3] = {
+      vm_create_value(vm, _get_i32_type(vm), &ival, NULL),
+      vm_create_value(vm, _get_bool_type(vm), &bval, NULL),
+      vm_create_value(vm, _get_str_type(vm), sval, NULL),
+  };
+  value_t result = value_call(vm, gen_val, 3, call_argv);
+
+  /* Inference should succeed (no "could not infer" error). */
+  if (value_is_abnormal(result)) {
+    type_t rtype = value_get_type(result);
+    if (type_get_kind(rtype) == TYPE_KIND_EXCEPTION) {
+      const char *msg = (const char *)value_get_data(result);
+      EXPECT_TRUE(strstr(msg, "could not infer") == NULL)
+          << "Pack inference should succeed: " << msg;
+    }
+  }
+
+  if (ast_node) allocator_free(alloc, &ast_node);
+}
+
+/* ---- Pack scenario 2: pack in callable type params ---- */
+
+TEST_F(it_generic_inference, pack_in_callable_type) {
+  /* func foo[...T](cb: func(...T)->void, ...args: T)
+   * End-to-end: declare the generic function from source, create a callback,
+   * and call it. Uses the fixture's vm (set up by CubecTest). */
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+
+  /* Step 1: Declare the generic function.
+   * Pass &ast_node so _run_source doesn't free it — generic_fn_type_t holds a
+   * borrowed reference to the declaration node. We free it after vm_dispose. */
+  value_t decl_result = _run_source(vm,
+      "func foo[...T](cb: func(...T)->void, ...args: T): void {};", &ast_node);
+  if (value_is_abnormal(decl_result)) {
+    if (ast_node) allocator_free(alloc, &ast_node);
+    type_t rtype = value_get_type(decl_result);
+    if (type_get_kind(rtype) == TYPE_KIND_EXCEPTION) {
+      const char *msg = (const char *)value_get_data(decl_result);
+      FAIL() << "Declaration failed: " << msg;
+    }
+    FAIL() << "Declaration returned abnormal result";
+  }
+
+  /* Step 2: Look up the generic function in scope */
+  scope_t scope = vm_get_current_scope(vm);
+  name_t foo_name = scope_lookup(scope, "foo");
+  ASSERT_NE(foo_name, nullptr) << "foo should be in scope";
+  ASSERT_NE(foo_name->ref, nullptr) << "foo should have a value";
+  value_t gen_val = foo_name->ref;
+  ASSERT_EQ(type_get_kind(value_get_type(gen_val)), TYPE_KIND_GENERIC_FN)
+      << "foo should be a generic function type";
+
+  /* Step 3: Create a func(i32, bool)->void callback value */
+  vec_init_t cvi = {.auto_dispose = false};
+  vec_t cparam_types = (vec_t)allocator_create(alloc, &g_vec_class, &cvi);
+  vec_push(cparam_types, _get_i32_type(vm));
+  vec_push(cparam_types, _get_bool_type(vm));
+  value_t callable_tv = vm_create_callable_type_value(vm, cparam_types,
+                                                       _get_void_type(vm), false,
+                                                       true, "<test>");
+  allocator_free(alloc, &cparam_types);
+  ASSERT_FALSE(value_is_abnormal(callable_tv));
+  callable_type_t ct = (callable_type_t)value_get_data(callable_tv);
+  ASSERT_NE(ct, nullptr);
+  value_t callback = create_callable_value(vm, ct, NULL, "cb");
+  ASSERT_FALSE(value_is_abnormal(callback));
+
+  /* Step 4: Call foo(callback, 42, true) — T should be inferred as [i32, bool] */
+  int32_t ival = 42;
+  bool bval = true;
+  value_t call_argv[3] = {
+      callback,
+      vm_create_value(vm, _get_i32_type(vm), &ival, NULL),
+      vm_create_value(vm, _get_bool_type(vm), &bval, NULL),
+  };
+  value_t result = value_call(vm, gen_val, 3, call_argv);
+
+  /* Free AST node AFTER all usage — vm_dispose happens in TearDown */
+  if (ast_node) allocator_free(alloc, &ast_node);
+
+  if (value_is_abnormal(result)) {
+    type_t rtype = value_get_type(result);
+    if (type_get_kind(rtype) == TYPE_KIND_EXCEPTION) {
+      const char *msg = (const char *)value_get_data(result);
+      FAIL() << "Call failed: " << msg;
+    }
+    FAIL() << "Call returned abnormal result, kind=" << type_get_kind(rtype);
+  }
+  EXPECT_FALSE(value_is_abnormal(result));
+}
+
+/* ---- Pack scenario 3: mixed regular + pack params ---- */
+
+TEST_F(it_generic_inference, pack_mixed_with_regular_param) {
+  /* func foo[K, ...T](a: K, ...args: T) — calling foo(1, true, "hi")
+   * should infer K=i32, T=[bool, str] */
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+
+  /* Declare via source (end-to-end) */
+  value_t decl_result = _run_source(vm,
+      "func foo[K, ...T](a: K, ...args: T): K { return a; };", &ast_node);
+  if (value_is_abnormal(decl_result)) {
+    if (ast_node) allocator_free(alloc, &ast_node);
+    FAIL() << "Declaration failed";
+  }
+
+  /* Look up the generic function */
+  scope_t scope = vm_get_current_scope(vm);
+  name_t foo_name = scope_lookup(scope, "foo");
+  ASSERT_NE(foo_name, nullptr);
+  ASSERT_NE(foo_name->ref, nullptr);
+  value_t gen_val = foo_name->ref;
+
+  /* Call foo(42, true, "hi") — K=i32, T=[bool, str] */
+  int32_t ival = 42;
+  bool bval = true;
+  const char *sval = "hi";
+  value_t call_argv[3] = {
+      vm_create_value(vm, _get_i32_type(vm), &ival, NULL),
+      vm_create_value(vm, _get_bool_type(vm), &bval, NULL),
+      vm_create_value(vm, _get_str_type(vm), sval, NULL),
+  };
+  value_t result = value_call(vm, gen_val, 3, call_argv);
+
+  /* Inference should succeed. Body returns `a` of type K=i32. */
+  EXPECT_FALSE(value_is_abnormal(result));
+  if (!value_is_abnormal(result)) {
+    EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
+    EXPECT_EQ(*(int32_t *)value_get_data(result), 42);
+  }
+
+  if (ast_node) allocator_free(alloc, &ast_node);
+}
+
+/* ---- Value-type generic param constraints ---- */
+
+TEST_F(it_generic_inference, value_param_i32_allowed) {
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+  value_t decl_result = _run_source(vm,
+      "func foo[N: i32](): void {};", &ast_node);
+  if (ast_node) allocator_free(alloc, &ast_node);
+  EXPECT_FALSE(value_is_abnormal(decl_result))
+      << "Value param i32 should be allowed";
+}
+
+TEST_F(it_generic_inference, value_param_str_allowed) {
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+  value_t decl_result = _run_source(vm,
+      "func foo[S: str](): void {};", &ast_node);
+  if (ast_node) allocator_free(alloc, &ast_node);
+  EXPECT_FALSE(value_is_abnormal(decl_result))
+      << "Value param str should be allowed";
+}
+
+TEST_F(it_generic_inference, value_param_bool_allowed) {
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+  value_t decl_result = _run_source(vm,
+      "func foo[B: bool](): void {};", &ast_node);
+  if (ast_node) allocator_free(alloc, &ast_node);
+  EXPECT_FALSE(value_is_abnormal(decl_result))
+      << "Value param bool should be allowed";
+}
+
+TEST_F(it_generic_inference, value_param_struct_rejected) {
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+  /* Declare a struct type first, then try to use it as value param */
+  value_t decl_result = _run_source(vm,
+      "type Point = struct { x: i32; y: i32; };"
+      "func foo[P: Point](): void {};", &ast_node);
+  if (ast_node) allocator_free(alloc, &ast_node);
+  EXPECT_TRUE(value_is_abnormal(decl_result))
+      << "Value param struct should be rejected";
+}
+
+TEST_F(it_generic_inference, value_param_pointer_rejected) {
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+  value_t decl_result = _run_source(vm,
+      "func foo[P: *i32](): void {};", &ast_node);
+  if (ast_node) allocator_free(alloc, &ast_node);
+  EXPECT_TRUE(value_is_abnormal(decl_result))
+      << "Value param pointer should be rejected";
+}
+
+TEST_F(it_generic_inference, type_param_no_restriction) {
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t ast_node = NULL;
+  /* Type param (no value_type) should accept any type */
+  value_t decl_result = _run_source(vm,
+      "func foo[T](x: T): T { return x; };", &ast_node);
+  if (ast_node) allocator_free(alloc, &ast_node);
+  EXPECT_FALSE(value_is_abnormal(decl_result))
+      << "Type param should not be restricted";
 }

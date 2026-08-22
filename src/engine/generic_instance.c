@@ -411,8 +411,16 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
     type_t pt = (type_t)value_get_data(type_val);
     /* For rest params (...args: T), the type expression evaluates to a tuple
      * type (because the pack param T is bound to a tuple type value).
-     * Push that tuple type as the single rest parameter type. */
-    vec_push(param_types, pt); /* borrowed: types managed by vm->types */
+     * Expand the tuple's element types as individual parameters in the callable
+     * signature so that value_call sees the correct argc. */
+    if (param->is_rest && type_get_kind(pt) == TYPE_KIND_TUPLE) {
+      tuple_type_t tt = (tuple_type_t)pt;
+      uint64_t elem_count = tuple_type_get_field_count(tt);
+      for (uint64_t e = 0; e < elem_count; e++)
+        vec_push(param_types, tuple_type_get_element_type(tt, e));
+    } else {
+      vec_push(param_types, pt); /* borrowed: types managed by vm->types */
+    }
   }
 
   /* 5. evaluate return type expression */
@@ -440,9 +448,19 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
   /* 6. pop+dispose temp scope (restores parent, frees temp's registrations) */
   vm_pop_scope(vm);
 
-  /* 7. create callable_type_t with the concrete param types and return type */
+  /* 7. create callable_type_t with the concrete param types and return type.
+   * If the generic function has a rest param (...args), the expanded param_types
+   * already contains the individual element types — mark is_variadic so that
+   * value_call accepts >= param_count args instead of exact match. */
+  bool has_rest_param = false;
+  for (size_t i = 0; i < arg_count; i++) {
+    cubec_function_argument_t p =
+        (cubec_function_argument_t)vec_get(args, i);
+    if (p->is_rest) { has_rest_param = true; break; }
+  }
   value_t ctv = vm_create_callable_type_value(
-      vm, param_types, return_type, decl->is_c_variadic, true, "<generic>");
+      vm, param_types, return_type,
+      decl->is_c_variadic || has_rest_param, true, "<generic>");
   allocator_free(allocator, &param_types);
   callable_type_t ct = (callable_type_t)value_get_data(ctv);
 

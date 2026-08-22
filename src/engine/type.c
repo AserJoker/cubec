@@ -242,6 +242,19 @@ static vec_t _type_spread(vm_t vm, value_t self) {
     }
     return result;
   }
+  /* If the inner type is a GENERIC_PACK placeholder, return it as a single
+   * element so that callable parameter lists preserve the pack marker.
+   * This enables _callable_infer_walk to recognize pack expansion points
+   * during type inference. */
+  if (inner->kind == TYPE_KIND_GENERIC_PACK) {
+    allocator_t allocator = vm_get_allocator(vm);
+    type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t result = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+    value_t tv = vm_create_value_ref(vm, type_type, inner, NULL);
+    vec_push(result, tv);
+    return result;
+  }
   return NULL;
 }
 

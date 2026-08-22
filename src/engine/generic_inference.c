@@ -171,8 +171,13 @@ bool infer_walk_assign_param(vm_t vm, infer_ctx_t ctx,
 
   for (size_t i = 0; i < entry_count; i++) {
     if (strcmp(entries[i].name, name) == 0) {
-      if (entries[i].is_pack)
-        return false;
+      if (entries[i].is_pack) {
+        /* Pack param: collect each actual type into inferred_pack_values */
+        type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
+        value_t type_val = vm_create_value_ref(vm, type_type, actual, NULL);
+        vec_push(entries[i].inferred_pack_values, type_val);
+        return true;
+      }
       if (!entries[i].inferred_value) {
         type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
         value_t type_val = vm_create_value_ref(vm, type_type, actual, NULL);
@@ -337,13 +342,60 @@ bool _callable_infer_walk(vm_t vm, type_t formal, type_t actual,
   callable_type_t act = (callable_type_t)actual;
   uint64_t fpc = callable_type_get_param_count(fct);
   uint64_t apc = callable_type_get_param_count(act);
-  if (fpc != apc) return false;
+
+  /* Check if formal has a GENERIC_PACK param — it absorbs remaining actual params */
+  int pack_idx = -1;
   for (uint64_t i = 0; i < fpc; i++) {
-    type_t ft = callable_type_get_param_type(fct, i);
-    type_t at = callable_type_get_param_type(act, i);
-    if (!infer_walk_recurse(vm, (infer_ctx_t)ctx, ft, at))
-      return false;
+    if (type_get_kind(callable_type_get_param_type(fct, i)) == TYPE_KIND_GENERIC_PACK) {
+      pack_idx = (int)i;
+      break;
+    }
   }
+
+  if (pack_idx >= 0) {
+    /* Pack param: match fixed params before pack, collect remaining for pack,
+     * match fixed params after pack from the end. */
+    uint64_t fixed_before = (uint64_t)pack_idx;
+    uint64_t fixed_after = fpc - fixed_before - 1;
+    if (apc < fixed_before + fixed_after)
+      return false;
+
+    /* Match params before pack */
+    for (uint64_t i = 0; i < fixed_before; i++) {
+      type_t ft = callable_type_get_param_type(fct, i);
+      type_t at = callable_type_get_param_type(act, i);
+      if (!infer_walk_recurse(vm, (infer_ctx_t)ctx, ft, at))
+        return false;
+    }
+
+    /* Collect pack types — assign each actual type in the pack range */
+    type_t pack_type = callable_type_get_param_type(fct, (uint64_t)pack_idx);
+    const char *pack_name = generic_placeholder_get_name(pack_type);
+    uint64_t pack_end = apc - fixed_after;
+    for (uint64_t i = fixed_before; i < pack_end; i++) {
+      type_t at = callable_type_get_param_type(act, i);
+      if (!infer_walk_assign_param(vm, (infer_ctx_t)ctx, pack_name, at))
+        return false;
+    }
+
+    /* Match params after pack */
+    for (uint64_t i = 0; i < fixed_after; i++) {
+      type_t ft = callable_type_get_param_type(fct, fpc - fixed_after + i);
+      type_t at = callable_type_get_param_type(act, pack_end + i);
+      if (!infer_walk_recurse(vm, (infer_ctx_t)ctx, ft, at))
+        return false;
+    }
+  } else {
+    /* No pack: exact param count match required */
+    if (fpc != apc) return false;
+    for (uint64_t i = 0; i < fpc; i++) {
+      type_t ft = callable_type_get_param_type(fct, i);
+      type_t at = callable_type_get_param_type(act, i);
+      if (!infer_walk_recurse(vm, (infer_ctx_t)ctx, ft, at))
+        return false;
+    }
+  }
+
   type_t fret = callable_type_get_return_type(fct);
   type_t aret = callable_type_get_return_type(act);
   return infer_walk_recurse(vm, (infer_ctx_t)ctx, fret, aret);
@@ -549,6 +601,10 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
           ? string_get(((cubec_literal_identifier_t)farg->identifier)->value)
           : "<anonymous>";
       vm_pop_scope(vm);
+      for (size_t j = 0; j < param_count; j++) {
+        if (entries[j].inferred_pack_values)
+          allocator_free(allocator, &entries[j].inferred_pack_values);
+      }
       allocator_free(allocator, &formal_types);
       allocator_free(allocator, &entries);
       return create_exception_value(vm,
@@ -558,6 +614,10 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
     value_t type_val = run_expression(vm, farg->type, false);
     if (value_is_abnormal(type_val)) {
       vm_pop_scope(vm);
+      for (size_t j = 0; j < param_count; j++) {
+        if (entries[j].inferred_pack_values)
+          allocator_free(allocator, &entries[j].inferred_pack_values);
+      }
       allocator_free(allocator, &formal_types);
       allocator_free(allocator, &entries);
       return type_val;
@@ -565,6 +625,10 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
     if (type_get_kind(value_get_type(type_val)) != TYPE_KIND_TYPE) {
       const char *got_name = type_get_name(value_get_type(type_val));
       vm_pop_scope(vm);
+      for (size_t j = 0; j < param_count; j++) {
+        if (entries[j].inferred_pack_values)
+          allocator_free(allocator, &entries[j].inferred_pack_values);
+      }
       allocator_free(allocator, &formal_types);
       allocator_free(allocator, &entries);
       return create_exception_value(vm,
@@ -602,6 +666,10 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
       const char *formal_name = type_get_name(formal_types[i]);
       const char *actual_name = type_get_name(actual_type);
       vm_pop_scope(vm);
+      for (size_t j = 0; j < param_count; j++) {
+        if (entries[j].inferred_pack_values)
+          allocator_free(allocator, &entries[j].inferred_pack_values);
+      }
       allocator_free(allocator, &formal_types);
       allocator_free(allocator, &infer_ctx);
       allocator_free(allocator, &entries);
@@ -685,6 +753,10 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
     if (entries[i].is_pack) continue;
     if (!entries[i].inferred_value) {
       const char *pname = entries[i].name;
+      for (size_t j = 0; j < param_count; j++) {
+        if (entries[j].inferred_pack_values)
+          allocator_free(allocator, &entries[j].inferred_pack_values);
+      }
       allocator_free(allocator, &formal_types);
       allocator_free(allocator, &infer_ctx);
       allocator_free(allocator, &entries);
@@ -725,6 +797,10 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
     allocator_free(allocator, &inst_argv_arr);
 
   if (value_is_abnormal(instance)) {
+    for (size_t i = 0; i < param_count; i++) {
+      if (entries[i].inferred_pack_values)
+        allocator_free(allocator, &entries[i].inferred_pack_values);
+    }
     allocator_free(allocator, &formal_types);
     allocator_free(allocator, &infer_ctx);
     allocator_free(allocator, &entries);
@@ -734,6 +810,11 @@ value_t generic_fn_call_with_inference(vm_t vm, value_t generic_val,
   /* ---- 10. Call ---- */
   value_t result = value_call(vm, instance, call_argc, call_argv);
 
+  /* Clean up pack value vectors (created in step 1, replaced in step 6) */
+  for (size_t i = 0; i < param_count; i++) {
+    if (entries[i].inferred_pack_values)
+      allocator_free(allocator, &entries[i].inferred_pack_values);
+  }
   allocator_free(allocator, &formal_types);
   allocator_free(allocator, &infer_ctx);
   allocator_free(allocator, &entries);

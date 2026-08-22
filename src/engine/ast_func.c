@@ -9,6 +9,7 @@
 #include "engine/exception_type.h"
 #include "engine/interrupt_type.h"
 #include "engine/name.h"
+#include "engine/tuple_type.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include "core/vec.h"
@@ -177,8 +178,10 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
   vec_t params = decl->arguments; /* vec of cubec_function_argument_t */
   uint64_t param_count = params ? vec_get_size(params) : 0;
 
-  /* Clone each argument into args_scope with the parameter name */
-  for (uint64_t i = 0; i < param_count && i < argc; i++) {
+  /* Clone each argument into args_scope with the parameter name.
+   * For rest params (...args: T), collect remaining call arguments into a tuple. */
+  size_t argv_idx = 0;
+  for (uint64_t i = 0; i < param_count; i++) {
     cubec_function_argument_t param =
         (cubec_function_argument_t)vec_get(params, (size_t)i);
     if (!param || !param->identifier)
@@ -189,16 +192,46 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
         (cubec_literal_identifier_t)param->identifier;
     const char *param_name = string_get(ident->value);
 
-    /* Clone the argument value into the current scope (args_scope) */
-    scope_t prev = vm_set_scope(vm, args_scope);
-    value_t cloned = value_clone(vm, argv[(size_t)i]);
-    vm_set_scope(vm, prev);
+    if (param->is_rest) {
+      /* Rest param: collect remaining argv into a tuple value */
+      size_t rest_count = (argv_idx < argc) ? argc - argv_idx : 0;
+      if (rest_count > 0 && !shadow) {
+        /* Build element types vec from the remaining argv types */
+        vec_init_t etvi = {.auto_dispose = false};
+        vec_t element_types = (vec_t)allocator_create(alloc, &g_vec_class, &etvi);
+        for (size_t r = 0; r < rest_count; r++)
+          vec_push(element_types, value_get_type(argv[argv_idx + r]));
 
-    /* Bind name in args_scope */
-    name_t n = name_create(args_scope->allocator, cloned);
-    char *owned_name = cstring_clone(args_scope->allocator, param_name);
-    strmap_insert(args_scope->names, owned_name, n);
-    allocator_free(args_scope->allocator, &owned_name);
+        /* Create tuple type */
+        tuple_type_t tt = tuple_type_create(alloc, element_types, true);
+        allocator_free(alloc, &element_types);
+        vec_push(vm_get_types(vm), tt); /* register for cleanup */
+
+        /* Create tuple value from remaining args */
+        scope_t prev = vm_set_scope(vm, args_scope);
+        value_t tuple_val = create_tuple_value(vm, tt, &argv[argv_idx]);
+        vm_set_scope(vm, prev);
+
+        /* Bind name in args_scope */
+        name_t n = name_create(args_scope->allocator, tuple_val);
+        char *owned_name = cstring_clone(args_scope->allocator, param_name);
+        strmap_insert(args_scope->names, owned_name, n);
+        allocator_free(args_scope->allocator, &owned_name);
+      }
+      argv_idx = argc; /* all remaining consumed */
+    } else if (argv_idx < argc) {
+      /* Regular param: clone single argument */
+      scope_t prev = vm_set_scope(vm, args_scope);
+      value_t cloned = value_clone(vm, argv[argv_idx]);
+      vm_set_scope(vm, prev);
+
+      /* Bind name in args_scope */
+      name_t n = name_create(args_scope->allocator, cloned);
+      char *owned_name = cstring_clone(args_scope->allocator, param_name);
+      strmap_insert(args_scope->names, owned_name, n);
+      allocator_free(args_scope->allocator, &owned_name);
+      argv_idx++;
+    }
   }
 
   /* ---- Execute function body ---- */
