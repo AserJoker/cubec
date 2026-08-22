@@ -698,3 +698,105 @@ TEST_F(it_run_expression, same_type_arithmetic_with_suffix) {
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I8);
   EXPECT_EQ(*(int8_t *)value_get_data(v), 30);
 }
+
+/* ---- typeof / sizeof / alignof ---- */
+
+TEST_F(it_run_expression, typeof_i32_literal) {
+  value_t v = _run_expr("typeof(42)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  /* typeof returns a type value; its data is the type_t */
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TYPE);
+  type_t inner = (type_t)value_get_data(v);
+  EXPECT_EQ(type_get_kind(inner), TYPE_KIND_I32);
+}
+
+TEST_F(it_run_expression, typeof_arithmetic) {
+  value_t v = _run_expr("typeof(1 + 2)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TYPE);
+  type_t inner = (type_t)value_get_data(v);
+  EXPECT_EQ(type_get_kind(inner), TYPE_KIND_I32);
+}
+
+TEST_F(it_run_expression, sizeof_i32) {
+  value_t v = _run_expr("sizeof(42)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 4u);
+}
+
+TEST_F(it_run_expression, sizeof_bool) {
+  value_t v = _run_expr("sizeof(true)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 1u);
+}
+
+TEST_F(it_run_expression, alignof_i32) {
+  value_t v = _run_expr("alignof(42)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 4u);
+}
+
+TEST_F(it_run_expression, sizeof_with_var) {
+  _run_source("var x: i64 = 100;");
+  value_t v = _run_expr("sizeof(x)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 8u);
+}
+
+TEST_F(it_run_expression, typeof_with_var) {
+  _run_source("var x: f64 = 3.14;");
+  value_t v = _run_expr("typeof(x)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  type_t inner = (type_t)value_get_data(v);
+  EXPECT_EQ(type_get_kind(inner), TYPE_KIND_F64);
+}
+
+TEST_F(it_run_expression, sizeof_never_shadow) {
+  /* sizeof always returns concrete u64, even in shadow context */
+  value_t v = _run_expr("sizeof(42)", /*shadow=*/true);
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_FALSE(value_is_shadow(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 4u);
+}
+
+TEST_F(it_run_expression, typeof_never_shadow) {
+  /* typeof always returns concrete type value, even in shadow context */
+  value_t v = _run_expr("typeof(42)", /*shadow=*/true);
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_FALSE(value_is_shadow(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TYPE);
+  type_t inner = (type_t)value_get_data(v);
+  EXPECT_EQ(type_get_kind(inner), TYPE_KIND_I32);
+}
+
+/* ---- typeof/sizeof/alignof with type expressions ---- */
+
+TEST_F(it_run_expression, typeof_type_expr) {
+  /* typeof(i32) — i32 is a type expression, should unwrap to i32 */
+  value_t v = _run_expr("typeof(i32)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TYPE);
+  type_t inner = (type_t)value_get_data(v);
+  EXPECT_EQ(type_get_kind(inner), TYPE_KIND_I32);
+}
+
+TEST_F(it_run_expression, sizeof_type_expr) {
+  /* sizeof(i64) — type expression directly */
+  value_t v = _run_expr("sizeof(i64)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 8u);
+}
+
+TEST_F(it_run_expression, alignof_type_expr) {
+  /* alignof(bool) — type expression directly */
+  value_t v = _run_expr("alignof(bool)");
+  ASSERT_FALSE(value_is_abnormal(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 1u);
+}

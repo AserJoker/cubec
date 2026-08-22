@@ -18,6 +18,12 @@ value_t run_literal_identifier(vm_t vm, node_t node, bool shadow) {
 
   if (shadow) {
     type_t type = value_get_type(name->ref);
+    /* TYPE_KIND_TYPE values must never be shadowed: their data carries
+     * concrete type information that is always available at compile time.
+     * Shadowing would lose the data (set to NULL), making type expressions
+     * like typeof(i32) impossible to resolve. */
+    if (type_get_kind(type) == TYPE_KIND_TYPE)
+      return name->ref;
     return vm_create_value_shadow(vm, type, NULL, true);
   }
 

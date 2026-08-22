@@ -37,6 +37,9 @@ value_t run_expression_subscript(vm_t vm, node_t node, bool shadow);
 value_t run_expression_namespace_access(vm_t vm, node_t node,
                                         bool shadow);
 value_t run_expression_initialize_list(vm_t vm, node_t node, bool shadow);
+value_t run_expression_typeof(vm_t vm, node_t node, bool shadow);
+value_t run_expression_sizeof(vm_t vm, node_t node, bool shadow);
+value_t run_expression_alignof(vm_t vm, node_t node, bool shadow);
 
 /* ---- Wildcard runner ---- */
 
