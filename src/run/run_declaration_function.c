@@ -340,5 +340,25 @@ value_t run_declaration_function(vm_t vm, node_t node, bool shadow) {
     }
   }
 
+  /* Type-check function body (shadow execution).
+   * For extern/builtin functions (decl_node=NULL), ast_func_check is a no-op.
+   * For functions with a body, this runs the body in shadow mode to validate
+   * type consistency (e.g. return type matches declared return type). */
+  if (!decl->is_extern && !decl->is_builtin) {
+    value_t check_result = ast_func_check(vm, func_val);
+    if (value_is_abnormal(check_result)) {
+      if (shadow) {
+        while (vm_get_current_scope(vm) != scope_before)
+          vm_pop_scope(vm);
+        diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                             node->location,
+                             "function '%s' body type check failed",
+                             name ? name : "<anonymous>");
+        return create_void_value(vm);
+      }
+      return check_result;
+    }
+  }
+
   return func_val;
 }

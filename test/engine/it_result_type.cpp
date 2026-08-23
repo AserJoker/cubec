@@ -1,4 +1,4 @@
-﻿#include "engine/vm.h"
+#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -283,15 +283,18 @@ TEST_F(it_result_type, shadow_member_call_propagates_shadow) {
   vm_dispose(vm, allocator);
 }
 
-TEST_F(it_result_type, shadow_get_field_returns_exception) {
+TEST_F(it_result_type, shadow_get_field_returns_shadow) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
 
   value_t result_val = vm_create_union_shadow(vm, rv, false);
 
-  /* get_field on shadow result: shadow check before tag read 鈫?exception */
+  /* get_field on shadow result: returns shadow of field type for type-level
+   * computation (needed for ast_func_check shadow execution). */
   value_t got = value_get_field(vm, result_val, "_value");
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
+  /* _value field is i32 type, so shadow should have type i32 */
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
+  EXPECT_TRUE(value_is_shadow(got));
 
   vm_dispose(vm, allocator);
 }

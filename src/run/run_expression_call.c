@@ -1,9 +1,14 @@
 #include "run/run.h"
 #include "engine/vm.h"
+#include "engine/callable_type.h"
 #include "engine/exception_type.h"
+#include "engine/generic_fn_type.h"
 #include "engine/value.h"
+#include "cubec/declaration_function.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_spread.h"
+#include "cubec/literal_identifier.h"
+#include "core/string.h"
 #include "core/vec.h"
 
 value_t run_expression_call(vm_t vm, node_t node, bool shadow) {
@@ -64,6 +69,37 @@ value_t run_expression_call(vm_t vm, node_t node, bool shadow) {
       argv[i] = (value_t)vec_get(arg_vec, i);
   }
   allocator_free(alloc, &arg_vec);
+
+  /* Shadow mode: never execute the actual call — return a shadow of
+   * the return type. This prevents infinite recursion in shadow check
+   * of recursive functions and avoids side effects during type-only
+   * execution. The return type is extracted from the callable type.
+   * For generic function templates (TYPE_KIND_GENERIC_FN), extract the
+   * return type from the AST declaration since the template hasn't been
+   * instantiated yet. */
+  if (shadow) {
+    type_t callee_type = value_get_type(callee);
+    type_t ret_type = (type_t)value_get_data(vm_get_void_type(vm));
+    if (type_get_kind(callee_type) == TYPE_KIND_CALLABLE) {
+      ret_type = callable_type_get_return_type((callable_type_t)callee_type);
+    } else if (type_get_kind(callee_type) == TYPE_KIND_GENERIC_FN) {
+      /* Generic function template: extract return type from declaration.
+       * The declaration's return_type expression is evaluated with the
+       * current scope (which has generic params bound from the enclosing
+       * function's template_scope). */
+      generic_fn_type_t gt_fn = (generic_fn_type_t)callee_type;
+      cubec_declaration_function_t decl =
+          (cubec_declaration_function_t)generic_fn_type_get_node(gt_fn);
+      if (decl && decl->return_type) {
+        value_t rt_val = run_expression(vm, decl->return_type, true);
+        if (!value_is_abnormal(rt_val) &&
+            type_get_kind(value_get_type(rt_val)) == TYPE_KIND_TYPE)
+          ret_type = (type_t)value_get_data(rt_val);
+      }
+    }
+    if (argv) allocator_free(alloc, &argv);
+    return vm_create_value_shadow(vm, ret_type, NULL, true);
+  }
 
   value_t result = value_call(vm, callee, argc, argv);
   allocator_free(alloc, &argv);

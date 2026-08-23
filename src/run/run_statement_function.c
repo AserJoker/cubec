@@ -52,6 +52,7 @@ value_t run_statement_function(vm_t vm, node_t node, bool shadow) {
 
   /* construct the function value via declaration runner */
   value_t func_val = run_declaration_function(vm, (node_t)decl, shadow);
+  if (value_is_interrupt(func_val)) return func_val;
   if (value_is_abnormal(func_val))
     return func_val;
 

@@ -860,7 +860,10 @@ static value_t _union_get_field_raw(vm_t vm, value_t self, const char *name) {
     return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
                               name, type_get_name((type_t)ut));
 
-  if (value_is_shadow(self) || !value_get_data(self))
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, field_info_get_type(fi), NULL, true);
+
+  if (!value_get_data(self))
     return create_exception_value(vm, "cannot access field '%s' of uninitialized union", name);
 
   /* read directly from payload — no tag check, no result wrapping */
@@ -891,7 +894,10 @@ static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
     return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
                               name, type_get_name((type_t)ut));
 
-  if (value_is_shadow(self) || !value_get_data(self))
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, field_info_get_type(fi), NULL, true);
+
+  if (!value_get_data(self))
     return create_exception_value(vm, "cannot access field '%s' of uninitialized union", name);
 
   /* create result[field_type, u64] — error is just a code, not a heavy struct */

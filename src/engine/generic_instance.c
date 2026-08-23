@@ -880,7 +880,46 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
   if (value_is_abnormal(instance))
     return instance;
 
-  /* 13. build cache entry (borrows both params vec + instance) */
+  /* 12b. Type-check function body (shadow execution).
+   * Only at top-level instantiation (not during nested calls from within
+   * another function's execution). current_func being set indicates we
+   * are inside a function execution (including shadow).
+   * Cache entry is added first so recursive generic functions find their
+   * own instance. The shadow execution is safe because:
+   * - expression_call returns shadow directly in shadow mode
+   * - expression_subscript returns shadow for generic instantiation
+   * - _ast_func_exec returns shadow for nested shadow calls */
+  if (!vm_get_current_func(vm)) {
+    /* build cache entry first (borrows both params vec + instance) */
+    vec_init_t vi2 = {.auto_dispose = false};
+    vec_t params_vec2 = (vec_t)allocator_create(allocator, &g_vec_class, &vi2);
+    for (size_t i = 0; i < argc; i++)
+      vec_push(params_vec2, argv[i]);
+    generic_instance_t gi2 =
+        generic_instance_create(allocator, params_vec2, instance);
+    vec_push(generic_fn_type_get_instances(gt_fn), gi2);
+
+    value_t check_result = ast_func_check(vm, instance);
+    if (value_is_abnormal(check_result)) {
+      /* Remove the cache entry on check failure to avoid poisoning */
+      vec_t instances = generic_fn_type_get_instances(gt_fn);
+      size_t last = vec_get_size(instances);
+      if (last > 0) {
+        generic_instance_t last_gi =
+            (generic_instance_t)vec_get(instances, last - 1);
+        if (generic_instance_get_instance(last_gi) == instance) {
+          vec_remove(instances, last - 1);
+          allocator_free(allocator, &gi2);
+          allocator_free(allocator, &params_vec2);
+        }
+      }
+      return check_result;
+    }
+
+    return instance;
+  }
+
+  /* 13. build cache entry for nested instantiation (borrows both params vec + instance) */
   vec_init_t vi = {.auto_dispose = false};
   vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   for (size_t i = 0; i < argc; i++)

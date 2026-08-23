@@ -823,7 +823,10 @@ static value_t _struct_get_field(vm_t vm, value_t self, const char *name) {
     return create_exception_value(vm, "cannot access private field '%s' of struct '%s' from outside its module",
                               name, type_get_name((type_t)st));
 
-  if (value_is_shadow(self) || !value_get_data(self))
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, fi->type, NULL, true);
+
+  if (!value_get_data(self))
     return create_exception_value(vm, "cannot access field '%s' of uninitialized struct", name);
 
   /* memcpy field data out as temporary value */

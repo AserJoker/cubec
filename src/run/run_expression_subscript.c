@@ -14,11 +14,14 @@ value_t run_expression_subscript(vm_t vm, node_t node, bool shadow) {
 
   /* Disambiguate: generic instantiation vs subscript.
    * Generic values are TYPE_KIND_GENERIC / TYPE_KIND_GENERIC_FN — their own values,
-   * not wrapped in TYPE_KIND_TYPE. value.data holds the create_instance callback. */
+   * not wrapped in TYPE_KIND_TYPE. value.data holds the create_instance callback.
+   * Generic instantiation is always a compile-time operation regardless of shadow
+   * mode — it constructs concrete types/callables without side effects. */
   type_kind_t kind = type_get_kind(value_get_type(host));
   if (kind == TYPE_KIND_GENERIC || kind == TYPE_KIND_GENERIC_FN) {
     /* Generic instantiation path — evaluate all arguments, call value_instantiate.
-     * Shadow is ignored: instantiation is always concrete. */
+     * Instantiation is always concrete: it produces concrete types or callables
+     * needed for type-level computation (e.g. shadow parameter binding). */
     size_t argc = vec_get_size(sub->arguments);
     value_t argv_stack[8];
     value_t *argv = argv_stack;

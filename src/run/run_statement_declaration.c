@@ -96,6 +96,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
                                     "comptime variable '%s' requires initializer",
                                     name);
     value_t result = run_expression(vm, decl->expression, true);
+    if (value_is_interrupt(result)) return result;
     if (value_is_abnormal(result)) {
       if (shadow) {
         while (vm_get_current_scope(vm) != scope_before)
@@ -117,6 +118,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
                                       name);
       }
       value_t casted = value_safe_cast(vm, result, annotated);
+      if (value_is_interrupt(casted)) return casted;
       if (value_is_abnormal(casted)) {
         if (shadow) {
           while (vm_get_current_scope(vm) != scope_before)
@@ -161,6 +163,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
 
   /* ---- normal: evaluate initializer ---- */
   value_t result = run_expression(vm, decl->expression, shadow);
+  if (value_is_interrupt(result)) return result;
   if (value_is_abnormal(result)) {
     if (shadow) {
       while (vm_get_current_scope(vm) != scope_before)
@@ -183,6 +186,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
                                     name);
     }
     value_t casted = value_safe_cast(vm, result, annotated);
+    if (value_is_interrupt(casted)) return casted;
     if (value_is_abnormal(casted)) {
       if (shadow) {
         while (vm_get_current_scope(vm) != scope_before)

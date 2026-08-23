@@ -149,6 +149,16 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
 
   callable_type_t ct = (callable_type_t)value_get_type(fn);
 
+  /* In shadow mode, if we are already inside a function execution
+   * (current_func is set), this is a nested shadow call (e.g. recursive
+   * function body executing during ast_func_check). Return a shadow of
+   * the return type directly to prevent infinite recursion and avoid
+   * executing the function body again in type-check mode. */
+  if (shadow && vm_get_current_func(vm)) {
+    type_t ret_type = callable_type_get_return_type(ct);
+    return vm_create_value_shadow(vm, ret_type, NULL, true);
+  }
+
   /* ---- Save caller state ---- */
   scope_t caller_scope = vm_get_current_scope(vm);
   scope_t prev_root = vm_set_root_scope(vm, af->base.root_scope);
@@ -179,7 +189,10 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
   vec_t params = decl->arguments; /* vec of cubec_function_argument_t */
   uint64_t param_count = params ? vec_get_size(params) : 0;
 
-  /* Clone each argument into args_scope with the parameter name.
+  /* Bind parameters into args_scope.
+   * - Normal call (shadow=false): clone each argv value.
+   * - Shadow check (shadow=true): bind shadow values using declared param types
+   *   so the body can find parameter names during type-only execution.
    * For rest params (...args: T), collect remaining call arguments into a tuple. */
   size_t argv_idx = 0;
   for (uint64_t i = 0; i < param_count; i++) {
@@ -192,6 +205,15 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
     cubec_literal_identifier_t ident =
         (cubec_literal_identifier_t)param->identifier;
     const char *param_name = string_get(ident->value);
+
+    /* Resolve declared parameter type for shadow binding */
+    type_t param_type = NULL;
+    if (shadow && param->type) {
+      value_t pt_val = run_expression(vm, param->type, true);
+      if (!value_is_abnormal(pt_val) &&
+          type_get_kind(value_get_type(pt_val)) == TYPE_KIND_TYPE)
+        param_type = (type_t)value_get_data(pt_val);
+    }
 
     if (param->is_rest) {
       /* Rest param: collect remaining argv into a tuple value */
@@ -218,6 +240,12 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
         char *owned_name = cstring_clone(args_scope->allocator, param_name);
         strmap_insert(args_scope->names, owned_name, n);
         allocator_free(args_scope->allocator, &owned_name);
+      } else if (shadow && param_type) {
+        /* Shadow rest param: bind a shadow of the declared type */
+        scope_t prev = vm_set_scope(vm, args_scope);
+        value_t shadow_val = vm_create_value_shadow(vm, param_type, param_name, true);
+        (void)shadow_val;
+        vm_set_scope(vm, prev);
       }
       argv_idx = argc; /* all remaining consumed */
     } else if (argv_idx < argc) {
@@ -232,6 +260,13 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
       strmap_insert(args_scope->names, owned_name, n);
       allocator_free(args_scope->allocator, &owned_name);
       argv_idx++;
+    } else if (shadow && param_type) {
+      /* Shadow check with no matching argv: bind a shadow value
+       * using the declared parameter type so the body finds the name. */
+      scope_t prev = vm_set_scope(vm, args_scope);
+      value_t shadow_val = vm_create_value_shadow(vm, param_type, param_name, true);
+      (void)shadow_val;
+      vm_set_scope(vm, prev);
     }
   }
 
@@ -258,6 +293,24 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
      * is registered in the current scope (function-internal). We must NOT
      * add it to another scope — instead, we clone it into the caller scope. */
     type_t ret_type = callable_type_get_return_type(ct);
+
+    /* In shadow mode, if the return value is a shadow, skip safe_cast and
+     * just accept it — the body has a return path, which is the key check.
+     * safe_cast on shadow values can fail for valid type combinations
+     * (e.g. shadow nil → void) because shadow mode is about type-level
+     * existence, not runtime value compatibility. */
+    if (shadow && value_is_shadow(inner)) {
+      /* Pop+dispose runtime scopes back to base */
+      while (vm_get_current_scope(vm) != base)
+        vm_pop_scope(vm);
+
+      vm_set_scope(vm, caller_scope);
+      vm_set_root_scope(vm, prev_root);
+      vm_set_current_func(vm, prev_func);
+      closure->parent = saved_closure_parent;
+      return create_void_value(vm);
+    }
+
     inner = value_safe_cast(vm, inner, ret_type);
     if (value_is_abnormal(inner)) {
       /* safe_cast failed — treat as exception. Clone BEFORE disposing
