@@ -89,6 +89,10 @@ value_t run_expression(vm_t vm, node_t node, bool shadow) {
     result = run_expression_wildcard(vm, node, shadow); break;
   case CUBEC_NODE_EXPRESSION_SPREAD:
     result = run_expression_spread(vm, node, shadow); break;
+  case CUBEC_NODE_EXPRESSION_TRY:
+    result = run_expression_try(vm, node, shadow); break;
+  case CUBEC_NODE_EXPRESSION_ASSERT:
+    result = run_expression_assert(vm, node, shadow); break;
   default:
     result = create_exception_value(vm,
                                     "unsupported node kind %d",

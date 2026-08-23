@@ -57,6 +57,11 @@ value_t run_expression_wildcard(vm_t vm, node_t node, bool shadow);
 
 value_t run_expression_spread(vm_t vm, node_t node, bool shadow);
 
+/* ---- Try/Assert runners ---- */
+
+value_t run_expression_try(vm_t vm, node_t node, bool shadow);
+value_t run_expression_assert(vm_t vm, node_t node, bool shadow);
+
 /* ---- Type declaration runners ---- */
 
 value_t run_declaration_array(vm_t vm, node_t node, bool shadow);
