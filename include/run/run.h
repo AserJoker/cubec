@@ -110,6 +110,7 @@ value_t run_statement_interface(vm_t vm, node_t node, bool shadow);
 
 value_t run_statement_for(vm_t vm, node_t node, bool shadow);
 value_t run_statement_while(vm_t vm, node_t node, bool shadow);
+value_t run_statement_do_while(vm_t vm, node_t node, bool shadow);
 value_t run_statement_break(vm_t vm, node_t node, bool shadow);
 value_t run_statement_continue(vm_t vm, node_t node, bool shadow);
 value_t run_statement_enum(vm_t vm, node_t node, bool shadow);

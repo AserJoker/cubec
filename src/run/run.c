@@ -151,6 +151,8 @@ value_t run_statement(vm_t vm, node_t node, bool shadow) {
     return run_statement_for(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_WHILE:
     return run_statement_while(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_DO_WHILE:
+    return run_statement_do_while(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_BREAK:
     return run_statement_break(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_CONTINUE:
