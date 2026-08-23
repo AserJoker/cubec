@@ -5,11 +5,15 @@
 extern "C" {
 #endif
 
-/** @brief Interrupt kind — indicates the source of a function interruption.
+/** @brief Interrupt kind — indicates the source of a non-local exit.
  *  RETURN: return statement (return expr)
- *  Future: YIELD (coroutine), BREAK/CONTINUE (loops) */
+ *  BREAK: break statement (exit innermost loop)
+ *  CONTINUE: continue statement (skip to next loop iteration)
+ *  Future: YIELD (coroutine) */
 typedef enum interrupt_kind_t {
   INTERRUPT_KIND_RETURN = 0,
+  INTERRUPT_KIND_BREAK,
+  INTERRUPT_KIND_CONTINUE,
 } interrupt_kind_t;
 
 /** @brief Payload for interrupt values.

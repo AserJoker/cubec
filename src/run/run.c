@@ -147,8 +147,14 @@ value_t run_statement(vm_t vm, node_t node, bool shadow) {
     return run_statement_cunion(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_INTERFACE:
     return run_statement_interface(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_FOR:
+    return run_statement_for(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_WHILE:
     return run_statement_while(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_BREAK:
+    return run_statement_break(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_CONTINUE:
+    return run_statement_continue(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_ENUM:
     return run_statement_enum(vm, node, shadow);
   default:

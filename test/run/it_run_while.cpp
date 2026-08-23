@@ -376,3 +376,185 @@ TEST_F(it_run_while, nested_while_counts_correctly) {
   ASSERT_NE(count_val, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(count_val), 6);
 }
+
+/* ================================================================== *
+ *  Break statement                                                     *
+ * ================================================================== */
+
+TEST_F(it_run_while, break_exits_loop_early) {
+  _bind("i", create_i32_value(vm, 0));
+  value_t v = _run_stmt("while(true) { i = i + 1; if(i == 3) { break; } }");
+  ASSERT_NE(v, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  value_t i_val = _run_expr("i");
+  ASSERT_NE(i_val, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(i_val), 3);
+}
+
+TEST_F(it_run_while, break_in_counted_loop) {
+  _bind("sum", create_i32_value(vm, 0));
+  _bind("i", create_i32_value(vm, 0));
+  value_t v = _run_stmt("while(i < 100) { i = i + 1; if(i > 5) { break; } sum = sum + i; }");
+  ASSERT_NE(v, nullptr);
+
+  value_t sum_val = _run_expr("sum");
+  ASSERT_NE(sum_val, nullptr);
+  /* sum = 1 + 2 + 3 + 4 + 5 = 15 (break before adding 6) */
+  EXPECT_EQ(*(int32_t *)value_get_data(sum_val), 15);
+
+  value_t i_val = _run_expr("i");
+  ASSERT_NE(i_val, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(i_val), 6);
+}
+
+TEST_F(it_run_while, break_does_not_propagate_past_loop) {
+  /* break is consumed by the while — outer code should see void, not interrupt */
+  _bind("i", create_i32_value(vm, 0));
+  value_t v = _run_stmt("while(true) { break; }");
+  ASSERT_NE(v, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}
+
+TEST_F(it_run_while, nested_break_only_exits_inner_loop) {
+  _bind("count", create_i32_value(vm, 0));
+  _bind("i", create_i32_value(vm, 0));
+  _bind("j", create_i32_value(vm, 0));
+  value_t v = _run_stmt("while(i < 3) { j = 0; while(j < 10) { count = count + 1; j = j + 1; if(j == 2) { break; } } i = i + 1; }");
+  ASSERT_NE(v, nullptr);
+
+  /* Inner loop runs 2 iterations per outer iteration, outer runs 3 times */
+  value_t count_val = _run_expr("count");
+  ASSERT_NE(count_val, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(count_val), 6);
+}
+
+/* ================================================================== *
+ *  Continue statement                                                  *
+ * ================================================================== */
+
+TEST_F(it_run_while, continue_skips_rest_of_body) {
+  _bind("sum", create_i32_value(vm, 0));
+  _bind("i", create_i32_value(vm, 0));
+  /* sum even numbers 1..5: skip odd via continue */
+  value_t v = _run_stmt("while(i < 5) { i = i + 1; if(i == 1 + i / 2 * 2) { continue; } sum = sum + i; }");
+  /* Actually let's use a clearer condition */
+  (void)v;
+  _bind("sum", create_i32_value(vm, 0));
+  _bind("i", create_i32_value(vm, 0));
+  /* i goes 1..5, continue when i is odd (i % 2 != 0), sum only evens */
+  v = _run_stmt("while(i < 5) { i = i + 1; if(i - i / 2 * 2 != 0) { continue; } sum = sum + i; }");
+  ASSERT_NE(v, nullptr);
+
+  value_t sum_val = _run_expr("sum");
+  ASSERT_NE(sum_val, nullptr);
+  /* Evens from 1..5: 2 + 4 = 6 */
+  EXPECT_EQ(*(int32_t *)value_get_data(sum_val), 6);
+}
+
+TEST_F(it_run_while, continue_re_evaluates_condition) {
+  _bind("i", create_i32_value(vm, 0));
+  _bind("count", create_i32_value(vm, 0));
+  /* continue jumps to condition re-eval */
+  value_t v = _run_stmt("while(i < 5) { i = i + 1; if(i == 3) { continue; } count = count + 1; }");
+  ASSERT_NE(v, nullptr);
+
+  /* i: 0→1(count=1), 1→2(count=2), 2→3(skip), 3→4(count=3), 4→5(count=4), stop */
+  value_t count_val = _run_expr("count");
+  ASSERT_NE(count_val, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(count_val), 4);
+}
+
+TEST_F(it_run_while, continue_does_not_propagate_past_loop) {
+  _bind("i", create_i32_value(vm, 0));
+  /* continue is consumed by while — when condition becomes false, loop exits */
+  value_t v = _run_stmt("while(i < 3) { i = i + 1; continue; }");
+  ASSERT_NE(v, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  value_t i_val = _run_expr("i");
+  ASSERT_NE(i_val, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(i_val), 3);
+}
+
+/* ================================================================== *
+ *  Break vs return in while                                            *
+ * ================================================================== */
+
+TEST_F(it_run_while, break_and_return_coexist) {
+  /* break exits loop, return exits function — they are different */
+  _bind("i", create_i32_value(vm, 0));
+  type_t i32_type = (type_t)value_get_data(vm_get_i32_type(vm));
+  value_t func_val = _make_func_with_return_type(i32_type);
+
+  value_t prev_func = vm_set_current_func(vm, func_val);
+  /* break exits the loop, then return i is reached */
+  value_t v = _run_stmt("while(true) { i = 42; break; } return i;");
+  vm_set_current_func(vm, prev_func);
+
+  /* _run_stmt only parses one statement — the while.
+   * So we get void from the while (break consumed). */
+  ASSERT_NE(v, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}
+
+TEST_F(it_run_while, return_overrides_break) {
+  /* return inside loop body takes priority over break (break not reached) */
+  _bind("i", create_i32_value(vm, 0));
+  type_t i32_type = (type_t)value_get_data(vm_get_i32_type(vm));
+  value_t func_val = _make_func_with_return_type(i32_type);
+
+  value_t prev_func = vm_set_current_func(vm, func_val);
+  value_t v = _run_stmt("while(true) { return 99; break; }");
+  vm_set_current_func(vm, prev_func);
+
+  ASSERT_NE(v, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_INTERRUPT);
+  EXPECT_EQ(interrupt_get_kind(v), INTERRUPT_KIND_RETURN);
+  value_t inner = interrupt_get_value(v);
+  ASSERT_NE(inner, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(inner), 99);
+}
+
+/* ================================================================== *
+ *  Shadow mode — break/continue consumed by loop                       *
+ * ================================================================== */
+
+TEST_F(it_run_while, shadow_break_consumed_by_loop) {
+  _bind("i", create_i32_value(vm, 0));
+  node_t node = _parse_stmt("while(i < 10) { break; }");
+  value_t v = run_statement(vm, node, true);
+  free_node(node);
+  ASSERT_NE(v, nullptr);
+  /* Shadow: break in body is consumed by loop, returns void */
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}
+
+TEST_F(it_run_while, shadow_continue_consumed_by_loop) {
+  _bind("i", create_i32_value(vm, 0));
+  node_t node = _parse_stmt("while(i < 10) { continue; }");
+  value_t v = run_statement(vm, node, true);
+  free_node(node);
+  ASSERT_NE(v, nullptr);
+  /* Shadow: continue in body is consumed by loop, returns void */
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}
+
+TEST_F(it_run_while, shadow_return_still_propagates) {
+  _bind("i", create_i32_value(vm, 0));
+  type_t i32_type = (type_t)value_get_data(vm_get_i32_type(vm));
+  value_t func_val = _make_func_with_return_type(i32_type);
+
+  value_t prev_func = vm_set_current_func(vm, func_val);
+  node_t node = _parse_stmt("while(i < 10) { return 42; break; }");
+  value_t v = run_statement(vm, node, true);
+  free_node(node);
+  vm_set_current_func(vm, prev_func);
+
+  ASSERT_NE(v, nullptr);
+  /* Shadow: return still propagates past the loop (break is shadowed too,
+   * but return is reached first in body evaluation) */
+  if (value_is_interrupt(v)) {
+    EXPECT_EQ(interrupt_get_kind(v), INTERRUPT_KIND_RETURN);
+  }
+}

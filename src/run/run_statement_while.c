@@ -35,13 +35,16 @@ value_t run_statement_while(vm_t vm, node_t node, bool shadow) {
   if (value_is_shadow(cond_bool)) {
     /* Shadow mode: the loop may execute 0 or more times.
      * Evaluate the body for type checking; interrupts from body
-     * are collected (return paths through the loop). */
+     * are collected (return/break/continue paths through the loop).
+     * Break/continue are loop-local — they don't propagate out. */
     value_t body_val = run_statement(vm, stmt->body, true);
     if (value_is_abnormal(body_val) && !value_is_interrupt(body_val))
       return body_val;
-    /* Interrupt from body is a return path — propagate it.
-     * Non-interrupt body result is void (loop is a statement). */
-    if (value_is_interrupt(body_val)) return body_val;
+    if (value_is_interrupt(body_val)) {
+      interrupt_kind_t kind = interrupt_get_kind(body_val);
+      if (kind == INTERRUPT_KIND_RETURN) return body_val;
+      /* BREAK / CONTINUE are consumed by the loop — return void */
+    }
     return create_void_value(vm);
   }
 
@@ -52,13 +55,14 @@ value_t run_statement_while(vm_t vm, node_t node, bool shadow) {
     value_t body_val = run_statement(vm, stmt->body, shadow);
     if (value_is_interrupt(body_val)) {
       interrupt_kind_t kind = interrupt_get_kind(body_val);
-      /* return — propagate out of the loop */
       if (kind == INTERRUPT_KIND_RETURN) return body_val;
-      /* Future: BREAK / CONTINUE handling */
+      if (kind == INTERRUPT_KIND_BREAK) break;           /* exit loop */
+      if (kind == INTERRUPT_KIND_CONTINUE) goto reeval;  /* skip to condition */
       return body_val;
     }
     if (value_is_abnormal(body_val)) return body_val;
 
+  reeval:
     /* Re-evaluate condition */
     cond_val = run_expression(vm, stmt->condition, shadow);
     if (value_is_interrupt(cond_val)) return cond_val;
