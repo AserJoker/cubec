@@ -42,7 +42,6 @@ static void _bind_name(vm_t vm, value_t val, const char *name) {
 
 static type_t _resolve_underlying(vm_t vm, vec_t items) {
   type_t resolved = NULL;
-  type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
   size_t count = vec_get_size(items);
 
   for (size_t i = 0; i < count; i++) {
