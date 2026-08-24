@@ -410,3 +410,48 @@ TEST_F(it_run_for, shadow_infinite_no_condition) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 }
+
+/* ================================================================== *
+ *  var declaration in for init                                        *
+ * ================================================================== */
+
+TEST_F(it_run_for, var_init_basic) {
+  _bind("sum", create_i32_value(vm, 0));
+  value_t v = _run_stmt("for(var i = 1; i <= 5; i = i + 1) { sum = sum + i; }");
+  ASSERT_NE(v, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  value_t sum_val = _run_expr("sum");
+  ASSERT_NE(sum_val, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(sum_val), 15);  /* 1+2+3+4+5 */
+}
+
+TEST_F(it_run_for, var_init_with_break) {
+  _bind("sum", create_i32_value(vm, 0));
+  value_t v = _run_stmt("for(var i = 0; i < 100; i = i + 1) { if(i == 5) { break; } sum = sum + i; }");
+  ASSERT_NE(v, nullptr);
+
+  value_t sum_val = _run_expr("sum");
+  ASSERT_NE(sum_val, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(sum_val), 10);  /* 0+1+2+3+4 */
+}
+
+TEST_F(it_run_for, var_init_with_continue) {
+  _bind("sum", create_i32_value(vm, 0));
+  /* Skip even: sum odd 1..5 */
+  value_t v = _run_stmt("for(var i = 0; i < 6; i = i + 1) { if(i - i / 2 * 2 == 0) { continue; } sum = sum + i; }");
+  ASSERT_NE(v, nullptr);
+
+  value_t sum_val = _run_expr("sum");
+  ASSERT_NE(sum_val, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(sum_val), 9);  /* 1+3+5 */
+}
+
+TEST_F(it_run_for, var_init_shadow) {
+  _bind("sum", create_i32_value(vm, 0));
+  node_t node = _parse_stmt("for(var i = 0; i < 5; i = i + 1) { sum = sum + i; }");
+  value_t v = run_statement(vm, node, true);
+  free_node(node);
+  ASSERT_NE(v, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}

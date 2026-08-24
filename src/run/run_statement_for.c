@@ -17,12 +17,19 @@ value_t run_statement_for(vm_t vm, node_t node, bool shadow) {
   if (stmt->init) {
     value_t init_val;
     /* Init can be a statement (e.g. var declaration) or an expression
-     * (e.g. assignment). Dispatch based on node kind. */
-    if (stmt->init->kind == CUBEC_NODE_STATEMENT_DECLARATION ||
-        stmt->init->kind == CUBEC_NODE_STATEMENT_EMPTY) {
+     * (e.g. assignment, comma). Dispatch accordingly. */
+    switch (stmt->init->kind) {
+    /* Statement kinds that run_statement handles */
+    case CUBEC_NODE_STATEMENT_DECLARATION:
+    case CUBEC_NODE_STATEMENT_EMPTY:
+    case CUBEC_NODE_STATEMENT_EXPRESSION:
+    case CUBEC_NODE_STATEMENT_BLOCK:
       init_val = run_statement(vm, stmt->init, shadow);
-    } else {
+      break;
+    default:
+      /* Everything else is an expression node */
       init_val = run_expression(vm, stmt->init, shadow);
+      break;
     }
     if (value_is_interrupt(init_val)) return init_val;
     if (value_is_abnormal(init_val)) return init_val;
