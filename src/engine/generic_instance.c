@@ -4,12 +4,16 @@
 #include "cubec/declaration_struct.h"
 #include "cubec/declaration_union.h"
 #include "cubec/declaration_interface.h"
+#include "cubec/declaration_variable.h"
 #include "cubec/function_argument.h"
 #include "cubec/function_capture.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_union.h"
 #include "cubec/statement_interface.h"
+#include "cubec/statement_function.h"
+#include "cubec/statement_declaration.h"
+#include "cubec/statement_declaration_type.h"
 #include "cubec/interface_method.h"
 #include "cubec/struct_field.h"
 #include "cubec/union_field.h"
@@ -33,6 +37,29 @@
 #include "run/run.h"
 #include <stdbool.h>
 #include <string.h>
+
+/* ---- Error-return helper for temp scope ---- */
+
+/**
+ * @brief Pop the current (temporary) scope and return a clone of the error
+ * value in the restored parent scope. Prevents returning a dangling pointer
+ * when the error was registered in the scope being popped (auto_dispose frees
+ * all values in scope->values, including the exception/interrupt).
+ *
+ * The caller should do: vec_remove(cache, idx) → _pop_scope_return_error.
+ */
+static value_t _pop_scope_return_error(vm_t vm, value_t err) {
+  /* Clone err into the parent scope BEFORE popping, so the clone survives
+   * the scope disposal. Switch to parent scope temporarily so value_clone
+   * registers the clone there. */
+  scope_t temp = vm_get_current_scope(vm);
+  scope_t parent = temp->parent;
+  vm_set_scope(vm, parent);
+  value_t cloned = value_clone(vm, err);
+  vm_set_scope(vm, temp);
+  vm_pop_scope(vm);
+  return cloned;
+}
 
 /* ---- Shared cache lookup ---- */
 
@@ -181,7 +208,36 @@ value_t create_struct_instance(vm_t vm, value_t tmpl, size_t argc,
   value_t type_val =
       vm_create_struct_type_value(vm, base_name, false, "<builtin>");
 
-  /* 5. iterate members, add fields */
+  /* 5. early-cache: clone the unsealed type value into gt's isolated scope
+   *    and register it in the instance cache BEFORE processing members.
+   *    This allows self-referential types (e.g. `f: *Result[T, E]`) to
+   *    resolve via cache during field type evaluation. Both the clone and
+   *    the original share the same struct_type_t — seal/field additions
+   *    are visible through both value_t handles. */
+  scope_t orig_scope = vm_get_current_scope(vm);
+  scope_t gt_scope = generic_type_get_scope(gt);
+  vm_set_scope(vm, gt_scope);
+  value_t instance = value_clone(vm, type_val);
+  vm_set_scope(vm, orig_scope);
+
+  if (value_is_abnormal(instance)) {
+    vm_pop_scope(vm);
+    return instance;
+  }
+
+  /* build cache entry pointing to the early-cached instance */
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  for (size_t i = 0; i < argc; i++)
+    vec_push(params_vec, argv[i]);
+  generic_instance_t gi =
+      generic_instance_create(allocator, params_vec, instance);
+  vec_t instances = generic_type_get_instances(gt);
+  size_t cache_idx = vec_get_size(instances);
+  vec_push(instances, gi);
+
+  /* 6. first pass: process fields only — type layout must be complete
+   *    before methods/props can reference the sealed type. */
   size_t mc = vec_get_size(members);
   for (size_t i = 0; i < mc; i++) {
     node_t member = (node_t)vec_get(members, i);
@@ -196,53 +252,138 @@ value_t create_struct_instance(vm_t vm, value_t tmpl, size_t argc,
     value_t field_type_val = run_expression(vm, field->type, false);
 
     if (value_is_abnormal(field_type_val)) {
-      vm_pop_scope(vm);
-      return field_type_val;
+      vec_remove(instances, cache_idx);
+      return _pop_scope_return_error(vm, field_type_val);
     }
 
     /* field type expression must produce a type value */
-    if (type_get_kind(value_get_type(field_type_val)) != TYPE_KIND_TYPE) {
-      vm_pop_scope(vm);
-      return create_exception_value(
+    type_kind_t ftk = type_get_kind(value_get_type(field_type_val));
+    if (ftk != TYPE_KIND_TYPE) {
+      value_t err = create_exception_value(
           vm, "struct field '%s' type expression must produce a type, got '%s'",
           field_name, type_get_name(value_get_type(field_type_val)));
+      vec_remove(instances, cache_idx);
+      return _pop_scope_return_error(vm, err);
     }
 
-    vm_struct_add_field(vm, type_val, field_name, field_type_val,
+    value_t add_result = vm_struct_add_field(vm, type_val, field_name, field_type_val,
                         field->is_pub);
+    if (value_is_abnormal(add_result)) {
+      vec_remove(instances, cache_idx);
+      return _pop_scope_return_error(vm, add_result);
+    }
   }
 
-  /* 6. seal */
+  /* 7. seal — computes final size/alignment; fields can no longer be added */
   vm_struct_seal(vm, type_val);
 
-  /* 7. clone the sealed struct type value into the generic's isolated scope
-   *    BEFORE popping temp scope. vm_pop_scope disposes temp, which frees
-   *    type_val — so we must clone while type_val is still alive. */
-  scope_t orig_scope = vm_get_current_scope(vm);
-  scope_t gt_scope = generic_type_get_scope(gt);
-  vm_set_scope(vm, gt_scope);
-  value_t instance = value_clone(vm, type_val);
-  vm_set_scope(vm, orig_scope);
+  /* 8. second pass: process methods, props, and associated types.
+   *    These can safely reference the now-sealed type (e.g. self: *T). */
+  for (size_t i = 0; i < mc; i++) {
+    node_t member = (node_t)vec_get(members, i);
 
-  /* 8. pop+dispose temp scope (restores parent, frees temp's registrations) */
+    switch (member->kind) {
+    case CUBEC_NODE_STRUCT_FIELD:
+      break; /* already processed in first pass */
+
+    case CUBEC_NODE_STATEMENT_FUNCTION: {
+      cubec_statement_function_t sf = (cubec_statement_function_t)member;
+      cubec_declaration_function_t decl =
+          (cubec_declaration_function_t)sf->declarator;
+      const char *method_name = decl->name
+          ? string_get(((cubec_literal_identifier_t)decl->name)->value)
+          : NULL;
+      if (!method_name) {
+        vec_remove(instances, cache_idx);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "struct method declaration requires a name");
+      }
+
+      value_t func_val = run_declaration_function(vm, (node_t)decl, false);
+      if (value_is_abnormal(func_val)) {
+        vec_remove(instances, cache_idx);
+        return _pop_scope_return_error(vm, func_val);
+      }
+
+      value_t r = vm_struct_add_prop(vm, type_val, method_name,
+                                      func_val, true, true);
+      if (value_is_abnormal(r)) {
+        vec_remove(instances, cache_idx);
+        return _pop_scope_return_error(vm, r);
+      }
+      break;
+    }
+
+    case CUBEC_NODE_STATEMENT_DECLARATION: {
+      cubec_statement_declaration_t sd = (cubec_statement_declaration_t)member;
+      cubec_declaration_variable_t decl =
+          (cubec_declaration_variable_t)sd->declarator;
+      const char *prop_name =
+          string_get(((cubec_literal_identifier_t)decl->identifier)->value);
+
+      value_t prop_val = run_statement_declaration(vm, member, false);
+      if (value_is_abnormal(prop_val)) {
+        vec_remove(instances, cache_idx);
+        return _pop_scope_return_error(vm, prop_val);
+      }
+
+      scope_t scope = vm_get_current_scope(vm);
+      name_t found = scope_lookup(scope, prop_name);
+      if (!found || !found->ref) {
+        vec_remove(instances, cache_idx);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "struct static property '%s' not found after evaluation", prop_name);
+      }
+
+      value_t r = vm_struct_add_prop(vm, type_val, prop_name,
+                                      found->ref, false, true);
+      if (value_is_abnormal(r)) {
+        vec_remove(instances, cache_idx);
+        return _pop_scope_return_error(vm, r);
+      }
+      break;
+    }
+
+    case CUBEC_NODE_STATEMENT_DECLARATION_TYPE: {
+      cubec_statement_declaration_type_t sdt =
+          (cubec_statement_declaration_type_t)member;
+      const char *type_name =
+          string_get(((cubec_literal_identifier_t)sdt->name)->value);
+
+      value_t type_result = run_statement_declaration_type(vm, member, false);
+      if (value_is_abnormal(type_result)) {
+        vec_remove(instances, cache_idx);
+        return _pop_scope_return_error(vm, type_result);
+      }
+
+      scope_t scope = vm_get_current_scope(vm);
+      name_t found = scope_lookup(scope, type_name);
+      if (!found || !found->ref) {
+        vec_remove(instances, cache_idx);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "struct associated type '%s' not found after evaluation", type_name);
+      }
+
+      value_t r = vm_struct_add_prop(vm, type_val, type_name,
+                                      found->ref, false, true);
+      if (value_is_abnormal(r)) {
+        vec_remove(instances, cache_idx);
+        return _pop_scope_return_error(vm, r);
+      }
+      break;
+    }
+
+    default:
+      break;
+    }
+  }
+
+  /* 9. pop+dispose temp scope (restores parent, frees temp's registrations).
+   *    The instance in gt->scope survives because it was cloned there in step 5. */
   vm_pop_scope(vm);
-
-  if (value_is_abnormal(instance))
-    return instance;
-
-  /* 10. build cache entry (borrows both params vec + instance).
-   *     params_vec holds borrowed argv pointers (owned by caller's scope);
-   *     instance is borrowed from gt_scope->values. auto_dispose=false so
-   *     freeing the cache entry releases only the vec structure, not the
-   *     borrowed values. */
-  vec_init_t vi = {.auto_dispose = false};
-  vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
-  for (size_t i = 0; i < argc; i++)
-    vec_push(params_vec, argv[i]);
-
-  generic_instance_t gi =
-      generic_instance_create(allocator, params_vec, instance);
-  vec_push(generic_type_get_instances(gt), gi);
 
   return instance;
 }
@@ -284,7 +425,32 @@ value_t create_union_instance(vm_t vm, value_t tmpl, size_t argc,
   value_t type_val =
       vm_create_union_type_value(vm, base_name, false, "<builtin>");
 
-  /* 5. iterate members, add fields */
+  /* 5. early-cache: clone the unsealed type value into gt's isolated scope
+   *    and register in the instance cache BEFORE processing members.
+   *    This allows self-referential types to resolve via cache. */
+  scope_t orig_scope = vm_get_current_scope(vm);
+  scope_t gt_scope = generic_type_get_scope(gt);
+  vm_set_scope(vm, gt_scope);
+  value_t instance = value_clone(vm, type_val);
+  vm_set_scope(vm, orig_scope);
+
+  if (value_is_abnormal(instance)) {
+    vm_pop_scope(vm);
+    return instance;
+  }
+
+  /* build cache entry */
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  for (size_t i = 0; i < argc; i++)
+    vec_push(params_vec, argv[i]);
+  generic_instance_t gi =
+      generic_instance_create(allocator, params_vec, instance);
+  vec_t u_instances = generic_type_get_instances(gt);
+  size_t u_cache_idx = vec_get_size(u_instances);
+  vec_push(u_instances, gi);
+
+  /* 6. first pass: process fields only */
   size_t mc = vec_get_size(members);
   for (size_t i = 0; i < mc; i++) {
     node_t member = (node_t)vec_get(members, i);
@@ -296,68 +462,162 @@ value_t create_union_instance(vm_t vm, value_t tmpl, size_t argc,
 
       value_t field_type_val = run_expression(vm, field->type, false);
       if (value_is_abnormal(field_type_val)) {
-        vm_pop_scope(vm);
-        return field_type_val;
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, field_type_val);
       }
 
       if (type_get_kind(value_get_type(field_type_val)) != TYPE_KIND_TYPE) {
-        vm_pop_scope(vm);
-        return create_exception_value(
+        value_t err = create_exception_value(
             vm, "union field '%s' type expression must produce a type, got '%s'",
             field_name, type_get_name(value_get_type(field_type_val)));
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, err);
       }
 
-      vm_union_add_field(vm, type_val, field_name, field_type_val, true);
+      value_t add_result = vm_union_add_field(vm, type_val, field_name, field_type_val, true);
+      if (value_is_abnormal(add_result)) {
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, add_result);
+      }
     } else if (member->kind == CUBEC_NODE_STRUCT_FIELD) {
-      /* struct_field is used in some AST contexts (e.g. cunion) — handle it */
+      /* struct_field is used in some AST contexts (e.g. cunion) */
       cubec_struct_field_t field = (cubec_struct_field_t)member;
       const char *field_name =
           string_get(((cubec_literal_identifier_t)field->name)->value);
 
       value_t field_type_val = run_expression(vm, field->type, false);
       if (value_is_abnormal(field_type_val)) {
-        vm_pop_scope(vm);
-        return field_type_val;
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, field_type_val);
       }
 
       if (type_get_kind(value_get_type(field_type_val)) != TYPE_KIND_TYPE) {
-        vm_pop_scope(vm);
-        return create_exception_value(
+        value_t err = create_exception_value(
             vm, "union field '%s' type expression must produce a type, got '%s'",
             field_name, type_get_name(value_get_type(field_type_val)));
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, err);
       }
 
-      vm_union_add_field(vm, type_val, field_name, field_type_val,
+      value_t add_result2 = vm_union_add_field(vm, type_val, field_name, field_type_val,
                          field->is_pub);
+      if (value_is_abnormal(add_result2)) {
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, add_result2);
+      }
     }
   }
 
-  /* 6. seal */
+  /* 7. seal */
   vm_union_seal(vm, type_val);
 
-  /* 7. clone the sealed union type value into the generic's isolated scope
-   *    BEFORE popping temp scope. */
-  scope_t orig_scope = vm_get_current_scope(vm);
-  scope_t gt_scope = generic_type_get_scope(gt);
-  vm_set_scope(vm, gt_scope);
-  value_t instance = value_clone(vm, type_val);
-  vm_set_scope(vm, orig_scope);
+  /* 8. second pass: process methods, props, and associated types */
+  for (size_t i = 0; i < mc; i++) {
+    node_t member = (node_t)vec_get(members, i);
 
-  /* 8. pop+dispose temp scope */
+    switch (member->kind) {
+    case CUBEC_NODE_UNION_FIELD:
+    case CUBEC_NODE_STRUCT_FIELD:
+      break; /* already processed in first pass */
+
+    case CUBEC_NODE_STATEMENT_FUNCTION: {
+      cubec_statement_function_t sf = (cubec_statement_function_t)member;
+      cubec_declaration_function_t decl =
+          (cubec_declaration_function_t)sf->declarator;
+      const char *method_name = decl->name
+          ? string_get(((cubec_literal_identifier_t)decl->name)->value)
+          : NULL;
+      if (!method_name) {
+        vec_remove(u_instances, u_cache_idx);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "union method declaration requires a name");
+      }
+
+      value_t func_val = run_declaration_function(vm, (node_t)decl, false);
+      if (value_is_abnormal(func_val)) {
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, func_val);
+      }
+
+      value_t r = vm_union_add_prop(vm, type_val, method_name,
+                                     func_val, true, true);
+      if (value_is_abnormal(r)) {
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, r);
+      }
+      break;
+    }
+
+    case CUBEC_NODE_STATEMENT_DECLARATION: {
+      cubec_statement_declaration_t sd = (cubec_statement_declaration_t)member;
+      cubec_declaration_variable_t decl =
+          (cubec_declaration_variable_t)sd->declarator;
+      const char *prop_name =
+          string_get(((cubec_literal_identifier_t)decl->identifier)->value);
+
+      value_t prop_val = run_statement_declaration(vm, member, false);
+      if (value_is_abnormal(prop_val)) {
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, prop_val);
+      }
+
+      scope_t scope = vm_get_current_scope(vm);
+      name_t found = scope_lookup(scope, prop_name);
+      if (!found || !found->ref) {
+        vec_remove(u_instances, u_cache_idx);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "union static property '%s' not found after evaluation", prop_name);
+      }
+
+      value_t r = vm_union_add_prop(vm, type_val, prop_name,
+                                     found->ref, false, true);
+      if (value_is_abnormal(r)) {
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, r);
+      }
+      break;
+    }
+
+    case CUBEC_NODE_STATEMENT_DECLARATION_TYPE: {
+      cubec_statement_declaration_type_t sdt =
+          (cubec_statement_declaration_type_t)member;
+      const char *type_name =
+          string_get(((cubec_literal_identifier_t)sdt->name)->value);
+
+      value_t type_result = run_statement_declaration_type(vm, member, false);
+      if (value_is_abnormal(type_result)) {
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, type_result);
+      }
+
+      scope_t scope = vm_get_current_scope(vm);
+      name_t found = scope_lookup(scope, type_name);
+      if (!found || !found->ref) {
+        vec_remove(u_instances, u_cache_idx);
+        vm_pop_scope(vm);
+        return create_exception_value(vm,
+            "union associated type '%s' not found after evaluation", type_name);
+      }
+
+      value_t r = vm_union_add_prop(vm, type_val, type_name,
+                                     found->ref, false, true);
+      if (value_is_abnormal(r)) {
+        vec_remove(u_instances, u_cache_idx);
+        return _pop_scope_return_error(vm, r);
+      }
+      break;
+    }
+
+    default:
+      break;
+    }
+  }
+
+  /* 9. pop+dispose temp scope.
+   *    The instance in gt->scope survives because it was cloned there in step 5. */
   vm_pop_scope(vm);
-
-  if (value_is_abnormal(instance))
-    return instance;
-
-  /* 9. build cache entry */
-  vec_init_t vi = {.auto_dispose = false};
-  vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
-  for (size_t i = 0; i < argc; i++)
-    vec_push(params_vec, argv[i]);
-
-  generic_instance_t gi =
-      generic_instance_create(allocator, params_vec, instance);
-  vec_push(generic_type_get_instances(gt), gi);
 
   return instance;
 }
@@ -429,15 +689,14 @@ value_t create_interface_instance(vm_t vm, value_t tmpl, size_t argc,
       value_t pt_val = run_expression(vm, param->type, false);
       if (value_is_abnormal(pt_val)) {
         allocator_free(allocator, &param_types);
-        vm_pop_scope(vm);
-        return pt_val;
+        return _pop_scope_return_error(vm, pt_val);
       }
       if (type_get_kind(value_get_type(pt_val)) != TYPE_KIND_TYPE) {
-        allocator_free(allocator, &param_types);
-        vm_pop_scope(vm);
-        return create_exception_value(vm,
+        value_t err = create_exception_value(vm,
             "interface method '%s' parameter type must produce a type, got '%s'",
             method_name, type_get_name(value_get_type(pt_val)));
+        allocator_free(allocator, &param_types);
+        return _pop_scope_return_error(vm, err);
       }
       type_t pt = (type_t)value_get_data(pt_val);
       vec_push(param_types, pt);
@@ -449,15 +708,14 @@ value_t create_interface_instance(vm_t vm, value_t tmpl, size_t argc,
       value_t rt_val = run_expression(vm, method->return_type, false);
       if (value_is_abnormal(rt_val)) {
         allocator_free(allocator, &param_types);
-        vm_pop_scope(vm);
-        return rt_val;
+        return _pop_scope_return_error(vm, rt_val);
       }
       if (type_get_kind(value_get_type(rt_val)) != TYPE_KIND_TYPE) {
-        allocator_free(allocator, &param_types);
-        vm_pop_scope(vm);
-        return create_exception_value(vm,
+        value_t err = create_exception_value(vm,
             "interface method '%s' return type must produce a type, got '%s'",
             method_name, type_get_name(value_get_type(rt_val)));
+        allocator_free(allocator, &param_types);
+        return _pop_scope_return_error(vm, err);
       }
       return_type = (type_t)value_get_data(rt_val);
     } else {
@@ -472,16 +730,14 @@ value_t create_interface_instance(vm_t vm, value_t tmpl, size_t argc,
     /* add method to interface */
     value_t r = vm_interface_add_method(vm, type_val, method_name, ctv);
     if (value_is_abnormal(r)) {
-      vm_pop_scope(vm);
-      return r;
+      return _pop_scope_return_error(vm, r);
     }
   }
 
   /* 6. seal */
   value_t seal_r = vm_interface_seal(vm, type_val);
   if (value_is_abnormal(seal_r)) {
-    vm_pop_scope(vm);
-    return seal_r;
+    return _pop_scope_return_error(vm, seal_r);
   }
 
   /* 7. clone the sealed interface type value into the generic's isolated scope
@@ -539,16 +795,15 @@ value_t create_type_instance(vm_t vm, value_t tmpl, size_t argc,
   value_t result = run_expression(vm, type_expr, false);
 
   if (value_is_abnormal(result)) {
-    vm_pop_scope(vm);
-    return create_exception_value(vm, "type expression evaluation failed");
+    return _pop_scope_return_error(vm, result);
   }
 
   /* result must be a type value */
   if (type_get_kind(value_get_type(result)) != TYPE_KIND_TYPE) {
-    vm_pop_scope(vm);
-    return create_exception_value(
+    value_t err = create_exception_value(
         vm, "type alias expression must produce a type, got '%s'",
         type_get_name(value_get_type(result)));
+    return _pop_scope_return_error(vm, err);
   }
 
   /* 5. clone the result type value into the generic's isolated scope BEFORE
@@ -677,17 +932,16 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
     }
     value_t type_val = run_expression(vm, param->type, false);
     if (value_is_abnormal(type_val)) {
-      vm_pop_scope(vm);
       allocator_free(allocator, &param_types);
-      return type_val;
+      return _pop_scope_return_error(vm, type_val);
     }
     if (type_get_kind(value_get_type(type_val)) != TYPE_KIND_TYPE) {
-      vm_pop_scope(vm);
-      allocator_free(allocator, &param_types);
-      return create_exception_value(vm,
+      value_t err = create_exception_value(vm,
                                     "generic function parameter type "
                                     "expression must produce a type, got '%s'",
                                     type_get_name(value_get_type(type_val)));
+      allocator_free(allocator, &param_types);
+      return _pop_scope_return_error(vm, err);
     }
     type_t pt = (type_t)value_get_data(type_val);
     /* For rest params (...args: T), the type expression evaluates to a tuple
@@ -709,17 +963,16 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
   if (decl->return_type) {
     value_t rt_val = run_expression(vm, decl->return_type, false);
     if (value_is_abnormal(rt_val)) {
-      vm_pop_scope(vm);
       allocator_free(allocator, &param_types);
-      return rt_val;
+      return _pop_scope_return_error(vm, rt_val);
     }
     if (type_get_kind(value_get_type(rt_val)) != TYPE_KIND_TYPE) {
-      vm_pop_scope(vm);
-      allocator_free(allocator, &param_types);
-      return create_exception_value(vm,
+      value_t err = create_exception_value(vm,
                                     "generic function return type expression "
                                     "must produce a type, got '%s'",
                                     type_get_name(value_get_type(rt_val)));
+      allocator_free(allocator, &param_types);
+      return _pop_scope_return_error(vm, err);
     }
     return_type = (type_t)value_get_data(rt_val);
   } else {

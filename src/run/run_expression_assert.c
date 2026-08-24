@@ -9,6 +9,7 @@
 #include "engine/bool_type.h"
 #include "engine/union_type.h"
 #include "engine/struct_type.h"
+#include "engine/callable_type.h"
 #include "cubec/expression_assert.h"
 
 value_t run_expression_assert(vm_t vm, node_t node, bool shadow) {
@@ -22,31 +23,21 @@ value_t run_expression_assert(vm_t vm, node_t node, bool shadow) {
    * if (host.ok()) host.value()
    * else panic("...", host.error())
    *
-   * Shadow mode: type-level computation — extract the _value field type
-   * from the union type and return a shadow of it. No method calls needed
-   * since shadow only cares about type-level existence.
+   * Shadow mode: use member_call to invoke value() — method existence
+   * and parameter compatibility are validated by member_call itself.
    * Error branch: check that .error() is valid at the type level
    * (compile errors reported, panic ignored). */
 
   if (shadow && value_is_shadow(host)) {
-    type_t host_type = value_get_type(host);
-
-    if (type_get_kind(host_type) == TYPE_KIND_UNION) {
-      /* Extract _value field type from the union — this is the unwrapped type */
-      union_type_t ut = (union_type_t)host_type;
-      field_info_t fv = _union_type_find_field(ut, "_value");
-      if (!fv)
-        return create_exception_value(vm,
-            ".! requires type with '_value' field, got '%s'",
-            type_get_name(host_type));
-      type_t value_type = field_info_get_type(fv);
-      return vm_create_value_shadow(vm, value_type, NULL, true);
+    value_t v = value_member_call(vm, host, "value", 0, NULL);
+    if (value_is_abnormal(v)) {
+      diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                           node->location,
+                           ".! requires result type with value() method, got '%s'",
+                           type_get_name(value_get_type(host)));
+      return create_void_value(vm);
     }
-
-    /* For other types (e.g. pointer), delegate to the appropriate vtable.
-     * Future: pointer .! could auto-deref. */
-    return create_exception_value(vm,
-        ".! requires union type, got '%s'", type_get_name(host_type));
+    return v;
   }
 
   /* Non-shadow: evaluate .ok() and branch */

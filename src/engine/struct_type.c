@@ -894,6 +894,43 @@ static value_t _struct_member_call(vm_t vm, value_t self, const char *name,
     return create_exception_value(vm, "struct '%s' has no method '%s'",
                               type_get_name((type_t)st), name);
 
+  /* Shadow: validate argc + safe_cast each arg (including self) to
+   * verify parameter type compatibility, then return shadow of return
+   * type — no user code execution. */
+  if (value_is_shadow(self)) {
+    callable_type_t ct = (callable_type_t)value_get_type(method);
+    size_t new_argc = argc + 1;
+    /* argc check */
+    if (!callable_type_is_variadic(ct)) {
+      if (new_argc != (size_t)callable_type_get_param_count(ct))
+        return create_exception_value(vm, "expected %llu args, got %llu",
+                                      (unsigned long long)callable_type_get_param_count(ct),
+                                      (unsigned long long)new_argc);
+    } else {
+      if (new_argc < (size_t)callable_type_get_param_count(ct))
+        return create_exception_value(vm, "expected at least %llu args, got %llu",
+                                      (unsigned long long)callable_type_get_param_count(ct),
+                                      (unsigned long long)new_argc);
+    }
+    /* safe_cast each fixed arg to declared param type */
+    allocator_t alloc = vm_get_allocator(vm);
+    value_t *full_argv = (value_t *)allocator_alloc(alloc, sizeof(value_t) * new_argc);
+    full_argv[0] = value_addrof(vm, self);
+    for (size_t i = 0; i < argc; i++)
+      full_argv[i + 1] = argv[i];
+    for (uint64_t i = 0; i < callable_type_get_param_count(ct); i++) {
+      type_t param_t = (type_t)vec_get(ct->param_types, (size_t)i);
+      value_t casted = value_safe_cast(vm, full_argv[i], param_t);
+      if (value_is_abnormal(casted)) {
+        allocator_free(alloc, &full_argv);
+        return casted;
+      }
+    }
+    allocator_free(alloc, &full_argv);
+    return vm_create_value_shadow(vm, callable_type_get_return_type(ct),
+                                  NULL, true);
+  }
+
   /* addrof(self) as first argument */
   value_t addr = value_addrof(vm, self);
 
@@ -983,6 +1020,17 @@ value_t vm_struct_add_field(vm_t vm, value_t type_val,
     return create_exception_value(vm, "duplicate field '%s' in struct type '%s'",
                                   name, type_get_name(inner));
   type_t field_type = (type_t)value_get_data(field_type_val);
+
+  /* Reject value-typed fields that reference unsealed struct/union types.
+   * Pointer types are exempt — they have fixed size regardless of pointee.
+   * Unsealed struct/union has size == 0 (seal guarantees size >= 1). */
+  type_kind_t fk = type_get_kind(field_type);
+  if ((fk == TYPE_KIND_STRUCT || fk == TYPE_KIND_UNION) &&
+      type_get_size(field_type) == 0)
+    return create_exception_value(vm,
+        "struct field '%s' has incomplete type '%s' (value-type self-reference not allowed, use pointer)",
+        name, type_get_name(field_type));
+
   _st_add_field(vm_get_allocator(vm), st, name, field_type, pub);
   return create_void_value(vm);
 }

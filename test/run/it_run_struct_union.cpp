@@ -19,6 +19,8 @@
 #include "core/vec.h"
 #include "cubec/program.h"
 #include "cubec/expression.h"
+#include "cubec/expression_try.h"
+#include "cubec/expression_assert.h"
 #include "cubec/token.h"
 #include "cubec/node.h"
 #include "run/run.h"
@@ -85,6 +87,14 @@ protected:
     value_t v = run_expression(vm, node, shadow);
     allocator_free(alloc, &node);
     return v;
+  }
+
+  void _bind(const char *name, value_t val) {
+    scope_t scope = vm_get_current_scope(vm);
+    name_t n = name_create(scope->allocator, val);
+    char *owned = cstring_clone(scope->allocator, name);
+    strmap_insert(scope->names, owned, n);
+    allocator_free(scope->allocator, &owned);
   }
 
   void TearDown() override {
@@ -487,4 +497,278 @@ TEST_F(it_run_struct_union, union_implement_interface_missing_method) {
       "interface Printable { func to_string(): *u8; } "
       "union Bad implement Printable { value: i32; empty: void; };");
   EXPECT_TRUE(value_is_abnormal(result));
+}
+
+/* ================================================================== *
+ *  Generic struct/union with methods — instance inherits methods?     *
+ * ================================================================== */
+
+TEST_F(it_run_struct_union, generic_struct_instance_has_methods) {
+  /* struct Box[T] { value: T; func zero(): T { return 0; } };
+   * Instantiate Box[i32] — the instance should carry the zero() method.
+   * This tests whether create_struct_instance carries over methods from
+   * the AST declaration. Uses a simple method body to avoid self-reference
+   * complications during instantiation. */
+  value_t result = _run_source(
+      "struct Box[T] { value: T; func zero(): T { return 0; } };",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result))
+      << (value_is_abnormal(result) ? (const char *)value_get_data(result) : "");
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "Box");
+  ASSERT_NE(n, nullptr);
+  value_t generic_val = n->ref;
+  ASSERT_EQ(type_get_kind(value_get_type(generic_val)), TYPE_KIND_GENERIC);
+
+  /* Instantiate Box[i32] */
+  value_t i32_type_val = _type_val(_get_i32_type());
+  value_t argv[] = {i32_type_val};
+  value_t instance = value_instantiate(vm, generic_val, 1, argv);
+  ASSERT_FALSE(value_is_abnormal(instance))
+      << "instantiation failed: "
+      << (value_is_abnormal(instance) ? (const char *)value_get_data(instance) : "");
+
+  /* Instance should have 1 field */
+  vec_t fields = vm_struct_get_fields(vm, instance);
+  ASSERT_EQ(vec_get_size(fields), 1u);
+
+  /* Check: does the instantiated type carry the zero method? */
+  strmap_t inst_methods = vm_struct_get_methods(vm, instance);
+  EXPECT_NE(strmap_find(inst_methods, "zero"), nullptr)
+      << "generic struct instance should inherit zero method from template";
+}
+
+TEST_F(it_run_struct_union, generic_union_instance_has_methods) {
+  /* union Option[T] { value: T; empty: void; func is_some(): bool { return true; } };
+   * Instantiate Option[i32] — the instance should carry the is_some() method.
+   * This tests whether create_union_instance carries over methods from
+   * the AST declaration. */
+  value_t result = _run_source(
+      "union Option[T] { value: T; empty: void; func is_some(): bool { return true; } };",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result))
+      << (value_is_abnormal(result) ? (const char *)value_get_data(result) : "");
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "Option");
+  ASSERT_NE(n, nullptr);
+  value_t generic_val = n->ref;
+  ASSERT_EQ(type_get_kind(value_get_type(generic_val)), TYPE_KIND_GENERIC);
+
+  /* Instantiate Option[i32] */
+  value_t i32_type_val = _type_val(_get_i32_type());
+  value_t argv[] = {i32_type_val};
+  value_t instance = value_instantiate(vm, generic_val, 1, argv);
+  ASSERT_FALSE(value_is_abnormal(instance))
+      << "instantiation failed: "
+      << (value_is_abnormal(instance) ? (const char *)value_get_data(instance) : "");
+
+  /* Instance should have 2 fields */
+  vec_t fields = vm_union_get_fields(vm, instance);
+  ASSERT_EQ(vec_get_size(fields), 2u);
+
+  /* Check: does the instantiated type carry the is_some method? */
+  strmap_t inst_methods = vm_union_get_methods(vm, instance);
+  EXPECT_NE(strmap_find(inst_methods, "is_some"), nullptr)
+      << "generic union instance should inherit is_some method from template";
+}
+
+/* ================================================================== *
+ *  Generic result protocol — struct-based result with ok/value/error *
+ * ================================================================== */
+
+TEST_F(it_run_struct_union, generic_struct_result_protocol_methods) {
+  /* struct Result[T, E] {
+   *   _value: T; _error: E; _is_ok: bool;
+   *   func ok(self: *Result[T, E]): bool { return true; }
+   *   func value(self: *Result[T, E]): T { return 0; }
+   *   func error(self: *Result[T, E]): E { return 0; }
+   * };
+   * Two-pass instantiation: fields parsed first → seal → then methods.
+   * Self-referential pointer types (e.g. self: *Result[T, E]) resolve
+   * via the early cache during field pass and are valid after seal. */
+  value_t result = _run_source(
+      "struct Result[T, E] { _value: T; _error: E; _is_ok: bool; "
+      "func ok(self: *Result[T, E]): bool { return true; } "
+      "func value(self: *Result[T, E]): T { return 0; } "
+      "func error(self: *Result[T, E]): E { return 0; } "
+      "};",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result))
+      << (value_is_abnormal(result) ? (const char *)value_get_data(result) : "");
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "Result");
+  ASSERT_NE(n, nullptr);
+  value_t generic_val = n->ref;
+  ASSERT_EQ(type_get_kind(value_get_type(generic_val)), TYPE_KIND_GENERIC);
+
+  /* Instantiate Result[i32, u64] */
+  value_t i32_type_val = _type_val(_get_i32_type());
+  value_t u64_type_val = _type_val(_get_u64_type());
+  value_t argv[] = {i32_type_val, u64_type_val};
+  value_t instance = value_instantiate(vm, generic_val, 2, argv);
+  ASSERT_FALSE(value_is_abnormal(instance))
+      << "instantiation failed: "
+      << (value_is_abnormal(instance) ? (const char *)value_get_data(instance) : "");
+
+  /* Instance should have 3 fields */
+  vec_t fields = vm_struct_get_fields(vm, instance);
+  ASSERT_EQ(vec_get_size(fields), 3u);
+
+  /* Check: does the instantiated type carry the result protocol methods? */
+  strmap_t inst_methods = vm_struct_get_methods(vm, instance);
+  EXPECT_NE(strmap_find(inst_methods, "ok"), nullptr)
+      << "generic struct result should inherit ok method";
+  EXPECT_NE(strmap_find(inst_methods, "value"), nullptr)
+      << "generic struct result should inherit value method";
+  EXPECT_NE(strmap_find(inst_methods, "error"), nullptr)
+      << "generic struct result should inherit error method";
+}
+
+/* ================================================================== *
+ *  .? and .! on generic struct result (protocol-based)               *
+ * ================================================================== */
+
+TEST_F(it_run_struct_union, try_on_generic_struct_result_shadow) {
+  /* struct Result[T, E] with value() instance method — .? should extract T */
+  value_t result = _run_source(
+      "struct Result[T, E] { _value: T; _error: E; _is_ok: bool; "
+      "func ok(self: *Result[T, E]): bool { return true; } "
+      "func value(self: *Result[T, E]): T { return 0; } "
+      "func error(self: *Result[T, E]): E { return 0; } "
+      "};",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result));
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "Result");
+  ASSERT_NE(n, nullptr);
+  value_t generic_val = n->ref;
+
+  /* Instantiate Result[i32, u64] */
+  value_t i32_type_val = _type_val(_get_i32_type());
+  value_t u64_type_val = _type_val(_get_u64_type());
+  value_t argv[] = {i32_type_val, u64_type_val};
+  value_t instance = value_instantiate(vm, generic_val, 2, argv);
+  ASSERT_FALSE(value_is_abnormal(instance));
+
+  /* Create a shadow value of the instantiated struct type */
+  type_t inst_type = (type_t)value_get_data(instance);
+  value_t shadow_val = vm_create_value_shadow(vm, inst_type, NULL, true);
+  _bind("r", shadow_val);
+
+  /* Shadow .? should extract i32 type via value() method protocol */
+  value_t v = _run_expr("r.?", true);
+  ASSERT_NE(v, nullptr);
+  EXPECT_TRUE(value_is_shadow(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+}
+
+TEST_F(it_run_struct_union, assert_on_generic_struct_result_shadow) {
+  /* struct Result[T, E] with value() instance method — .! should extract T */
+  value_t result = _run_source(
+      "struct Result[T, E] { _value: T; _error: E; _is_ok: bool; "
+      "func ok(self: *Result[T, E]): bool { return true; } "
+      "func value(self: *Result[T, E]): T { return 0; } "
+      "func error(self: *Result[T, E]): E { return 0; } "
+      "};",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result));
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "Result");
+  ASSERT_NE(n, nullptr);
+  value_t generic_val = n->ref;
+
+  /* Instantiate Result[str, u64] */
+  value_t str_type_val = _type_val(_get_str_type());
+  value_t u64_type_val = _type_val(_get_u64_type());
+  value_t argv[] = {str_type_val, u64_type_val};
+  value_t instance = value_instantiate(vm, generic_val, 2, argv);
+  ASSERT_FALSE(value_is_abnormal(instance));
+
+  /* Create a shadow value of the instantiated struct type */
+  type_t inst_type = (type_t)value_get_data(instance);
+  value_t shadow_val = vm_create_value_shadow(vm, inst_type, NULL, true);
+  _bind("r", shadow_val);
+
+  /* Shadow .! should extract str type via value() method protocol */
+  value_t v = _run_expr("r.!", true);
+  ASSERT_NE(v, nullptr);
+  EXPECT_TRUE(value_is_shadow(v));
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STR);
+}
+
+TEST_F(it_run_struct_union, value_type_self_reference_field_fails) {
+  /* struct Foo[A] { f: Foo[A]; } — value-type self-reference is invalid
+   * (infinite size). Declaration succeeds (fields not resolved until
+   * instantiation), but instantiation should fail. */
+  value_t result = _run_source(
+      "struct Foo[A] { f: Foo[A]; };",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result));
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "Foo");
+  ASSERT_NE(n, nullptr);
+  value_t generic_val = n->ref;
+
+  value_t i32_type_val = _type_val(_get_i32_type());
+  value_t instance = value_instantiate(vm, generic_val, 1, &i32_type_val);
+  /* Instantiation should fail — field 'f' has incomplete type
+   * (value-type self-reference to unsealed struct). */
+  EXPECT_TRUE(value_is_abnormal(instance));
+
+  /* Verify the failed struct_type_t is in vm->types — this is expected,
+   * all types are registered there. vm_dispose will clean them up. */
+}
+
+TEST_F(it_run_struct_union, pointer_self_reference_field_ok) {
+  /* struct Foo[A] { f: *Foo[A]; } — pointer self-reference is valid
+   * (fixed size regardless of pointee). */
+  value_t result = _run_source(
+      "struct Foo[A] { f: *Foo[A]; };",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result))
+      << (value_is_abnormal(result) ? (const char *)value_get_data(result) : "");
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "Foo");
+  ASSERT_NE(n, nullptr);
+  value_t generic_val = n->ref;
+
+  value_t i32_type_val = _type_val(_get_i32_type());
+  value_t instance = value_instantiate(vm, generic_val, 1, &i32_type_val);
+  ASSERT_FALSE(value_is_abnormal(instance));
+
+  /* Should have 1 field of pointer type */
+  vec_t fields = vm_struct_get_fields(vm, instance);
+  ASSERT_EQ(vec_get_size(fields), 1u);
+}
+
+TEST_F(it_run_struct_union, method_without_self_param_fails_runtime_call) {
+  /* func ok(): bool { return true; } — no self parameter.
+   * Runtime: a.ok() → typeof(a)::ok(a.&) → 1 arg vs 0 params → error */
+  value_t result = _run_source(
+      "struct Foo { func ok(): bool { return true; } };",
+      &held_node_);
+  ASSERT_FALSE(value_is_abnormal(result));
+
+  /* Create a Foo instance and try to call ok() */
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "Foo");
+  ASSERT_NE(n, nullptr);
+  value_t foo_type_val = n->ref;
+
+  value_t foo_inst = vm_create_struct_value(vm, foo_type_val, NULL);
+  ASSERT_NE(foo_inst, nullptr);
+  _bind("foo", foo_inst);
+
+  /* Runtime member call should fail — ok() has 0 params but member_call adds self */
+  value_t v = _run_expr("foo.ok()");
+  ASSERT_NE(v, nullptr);
+  EXPECT_TRUE(value_is_abnormal(v))
+      << "method without self param should fail at runtime";
 }

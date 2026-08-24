@@ -15,6 +15,7 @@
 #include "engine/struct_type.h"
 #include "engine/union_type.h"
 #include "engine/callable_type.h"
+#include "engine/diagnostic.h"
 #include "engine/pointer_type.h"
 #include "cubec/expression_try.h"
 #include "cubec/expression_assert.h"
@@ -406,24 +407,29 @@ TEST_F(it_run_try_assert, shadow_try_on_str_result) {
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STR);
 }
 
-TEST_F(it_run_try_assert, shadow_assert_on_i32_returns_exception) {
-  /* i32 doesn't have _value field — shadow mode returns exception */
+TEST_F(it_run_try_assert, shadow_assert_on_i32_reports_diagnostic) {
+  /* i32 doesn't satisfy result protocol — shadow mode reports compile error */
   _bind("x", create_i32_value(vm, 42));
+  size_t prev_count = diagnostic_list_get_size(vm_get_diagnostics(vm));
   node_t node = _parse_expr("x.!");
   value_t v = run_expression(vm, node, true);
   free_node(node);
   ASSERT_NE(v, nullptr);
-  /* i32 shadow is not a union, so .! should fail */
-  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_EXCEPTION);
+  /* Shadow mode: unsupported type reports compile error, returns void */
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  EXPECT_GT(diagnostic_list_get_size(vm_get_diagnostics(vm)), prev_count);
 }
 
-TEST_F(it_run_try_assert, shadow_try_on_i32_returns_exception) {
+TEST_F(it_run_try_assert, shadow_try_on_i32_reports_diagnostic) {
   _bind("x", create_i32_value(vm, 42));
+  size_t prev_count = diagnostic_list_get_size(vm_get_diagnostics(vm));
   node_t node = _parse_expr("x.?");
   value_t v = run_expression(vm, node, true);
   free_node(node);
   ASSERT_NE(v, nullptr);
-  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_EXCEPTION);
+  /* Shadow mode: unsupported type reports compile error, returns void */
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  EXPECT_GT(diagnostic_list_get_size(vm_get_diagnostics(vm)), prev_count);
 }
 
 /* ================================================================== *

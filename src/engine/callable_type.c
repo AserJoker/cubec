@@ -452,11 +452,7 @@ static value_t _callable_type_extends(vm_t vm, type_t sub, type_t super) {
 static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv) {
   callable_type_t ct = (callable_type_t)value_get_type(self);
 
-  /* shadow: return shadow of return type */
-  if (value_is_shadow(self))
-    return vm_create_value_shadow(vm, ct->return_type, NULL, true);
-
-  /* argc check */
+  /* argc check — must validate before shadow shortcut */
   if (ct->is_variadic) {
     if (argc < ct->param_count)
       return create_exception_value(vm, "expected at least %llu args, got %llu",
@@ -468,6 +464,10 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
                                 (unsigned long long)ct->param_count,
                                 (unsigned long long)argc);
   }
+
+  /* shadow: return shadow of return type */
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, ct->return_type, NULL, true);
 
   /* safe_cast each fixed arg to declared param type */
   allocator_t alloc = vm_get_allocator(vm);
