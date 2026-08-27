@@ -55,9 +55,18 @@ static value_t _lvalue_read_namespace_access(vm_t vm, node_t node,
                                              bool shadow) {
   cubec_expression_namespace_access_t ns =
       (cubec_expression_namespace_access_t)node;
+  const char *field = string_get(ns->field->value);
+
+  /* Prefix :: — current module's global scope */
+  if (!ns->host) {
+    /* TODO: resolve field in current module's global scope */
+    return create_exception_value(vm,
+        "::%s: current-module scope resolution not yet implemented", field);
+  }
+
   value_t host = run_expression(vm, ns->host, shadow);
   if (value_is_abnormal(host)) return host;
-  return value_get_prop(vm, host, string_get(ns->field->value));
+  return value_get_prop(vm, host, field);
 }
 
 static value_t _lvalue_read(vm_t vm, node_t lvalue, bool shadow) {
@@ -131,9 +140,18 @@ static value_t _lvalue_write_namespace_access(vm_t vm, node_t node,
                                               value_t rv) {
   cubec_expression_namespace_access_t ns =
       (cubec_expression_namespace_access_t)node;
+  const char *field = string_get(ns->field->value);
+
+  /* Prefix :: — current module's global scope */
+  if (!ns->host) {
+    /* TODO: resolve field in current module's global scope */
+    return create_exception_value(vm,
+        "::%s: current-module scope resolution not yet implemented", field);
+  }
+
   value_t host = run_expression(vm, ns->host, false);
   if (value_is_abnormal(host)) return host;
-  value_t result = value_set_prop(vm, host, string_get(ns->field->value), rv);
+  value_t result = value_set_prop(vm, host, field, rv);
   if (value_is_abnormal(result)) return result;
   return create_void_value(vm);
 }

@@ -15,7 +15,7 @@ extern "C" {
 struct _cubec_expression_namespace_access_t;
 struct _cubec_expression_namespace_access_t {
   struct _cubec_expression_t super;
-  node_t host; /**< The left-hand expression */
+  node_t host; /**< The left-hand expression, or NULL for current-module scope (::field) */
   cubec_literal_identifier_t
       field; /**< The namespace/type name (identifier literal) */
 };
@@ -35,13 +35,17 @@ typedef struct _cubec_expression_namespace_access_init_t
 
 /**
  * @brief Try to parse a namespace/type-member access expression: \c
- * ::identifier
+ * host::identifier or \c ::identifier
  *
  * Used for namespace navigation (std::vec::Vec) and type member access
  * (Vec::create, File::open). The :: operator is the type-level accessor,
  * while . is reserved for instance member access (obj.field).
  *
- * @param host  The already-parsed left-hand expression.
+ * When host is NULL, the expression refers to the current module's global
+ * scope (e.g. ::field means current_module::field).
+ *
+ * @param host  The already-parsed left-hand expression, or NULL for
+ *              current-module scope prefix (::).
  * @return A new cubec_expression_namespace_access_t node, or NULL if the
  *         current token is not \c "::".
  */

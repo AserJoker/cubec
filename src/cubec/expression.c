@@ -38,6 +38,8 @@
 #include "cubec/literal_undefined.h"
 #include "cubec/node.h"
 #include "cubec/node_error.h"
+#include "core/token.h"
+#include "cubec/token.h"
 #include <inttypes.h>
 
 static void _cubec_expression_init(cubec_expression_t self,
@@ -278,6 +280,36 @@ node_t read_atom(vm_t vm, vec_t tokens, size_t *position,
   if (result) {
     *position = current;
     return result;
+  }
+
+  // Try prefix namespace access: ::identifier (current-module scope)
+  {
+    size_t saved = current;
+    skip_whitespace(tokens, &saved);
+    token_t tok = vec_get(tokens, saved);
+    if (token_is(tok, CUBEC_TOKEN_SYMBOL, "::")) {
+      /* Prefix :: — create namespace_access with host=NULL */
+      size_t ns_pos = saved;
+      ns_pos++; /* skip '::' */
+      skip_whitespace(tokens, &ns_pos);
+      node_t field_node =
+          read_literal_identifier(vm, tokens, &ns_pos, filename);
+      if (field_node) {
+        cubec_expression_namespace_access_t ns =
+            allocator_create(vm_get_allocator(vm),
+                             &g_cubec_expression_namespace_access_class,
+                             &(cubec_expression_namespace_access_init_t){
+                                 .host = NULL,
+                                 .field = (cubec_literal_identifier_t)field_node,
+                             });
+        location_t *loc = token_get_location(tok);
+        ns->super.super.location = *loc;
+        ns->super.super.location.filename = filename;
+        *position = ns_pos;
+        return (node_t)ns;
+      }
+      /* '::' without identifier — not ours, restore */
+    }
   }
 
   // Try identifier

@@ -285,3 +285,117 @@ TEST_F(dt_expression_namespace_access, write_namespace_access) {
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
+
+/* ---- Prefix :: (current-module scope) ---- */
+
+TEST_F(dt_expression_namespace_access, prefix_scope_resolution) {
+  /* ::field — current module global scope, host=NULL */
+  const char *source = "::global_var";
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_value(vm, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+
+  cubec_expression_namespace_access_t ns = (cubec_expression_namespace_access_t)node;
+  EXPECT_EQ(ns->host, nullptr);
+  ASSERT_NE(ns->field, nullptr);
+  EXPECT_STREQ(string_get(ns->field->value), "global_var");
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_namespace_access, prefix_scope_resolution_then_postfix) {
+  /* ::Type::method — prefix :: then chained namespace access */
+  const char *source = "::MyType::create";
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_value(vm, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+
+  cubec_expression_namespace_access_t outer = (cubec_expression_namespace_access_t)node;
+  ASSERT_NE(outer->field, nullptr);
+  EXPECT_STREQ(string_get(outer->field->value), "create");
+
+  /* host is also a namespace_access with host=NULL */
+  ASSERT_NE(outer->host, nullptr);
+  EXPECT_EQ(outer->host->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+  cubec_expression_namespace_access_t inner = (cubec_expression_namespace_access_t)outer->host;
+  EXPECT_EQ(inner->host, nullptr);
+  EXPECT_STREQ(string_get(inner->field->value), "MyType");
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_namespace_access, prefix_scope_resolution_clone) {
+  const char *source = "::foo";
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_value(vm, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  node_t cloned = (node_t)alloc_clone(allocator, node);
+  ASSERT_NE(cloned, nullptr);
+  EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+
+  cubec_expression_namespace_access_t ns = (cubec_expression_namespace_access_t)cloned;
+  EXPECT_EQ(ns->host, nullptr);
+  ASSERT_NE(ns->field, nullptr);
+  EXPECT_STREQ(string_get(ns->field->value), "foo");
+
+  allocator_free(allocator, &cloned);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_namespace_access, prefix_scope_resolution_move) {
+  const char *source = "::bar";
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_value(vm, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  node_t moved = (node_t)alloc_move(allocator, node);
+  ASSERT_NE(moved, nullptr);
+  EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+
+  cubec_expression_namespace_access_t ns = (cubec_expression_namespace_access_t)moved;
+  EXPECT_EQ(ns->host, nullptr);
+  ASSERT_NE(ns->field, nullptr);
+  EXPECT_STREQ(string_get(ns->field->value), "bar");
+
+  allocator_free(allocator, &moved);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_namespace_access, write_prefix_scope_resolution) {
+  const char *source = "::global_var";
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_expression(ectx, node);
+  string_t result = token_writer_render(allocator, ectx->output_tokens);
+  emit_context_dispose(ectx);
+  const char *output = string_get(result);
+  EXPECT_STREQ(output, "::global_var");
+
+  allocator_free(allocator, &result);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}

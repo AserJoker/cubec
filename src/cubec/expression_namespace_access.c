@@ -23,7 +23,7 @@ static void _cubec_expression_namespace_access_init(
 
 static void _cubec_expression_namespace_access_dispose(
     cubec_expression_namespace_access_t self, allocator_t allocator) {
-  allocator_free(allocator, &self->host);
+  if (self->host) allocator_free(allocator, &self->host);
   allocator_free(allocator, &self->field);
   g_cubec_expression_class.dispose(&self->super, allocator);
 }
@@ -32,28 +32,28 @@ static void _cubec_expression_namespace_access_clone(
     cubec_expression_namespace_access_t self, allocator_t allocator,
     cubec_expression_namespace_access_t another) {
   g_cubec_expression_class.clone(&self->super, allocator, &another->super);
-  self->host = alloc_clone(allocator, another->host);
+  self->host = another->host ? alloc_clone(allocator, another->host) : NULL;
   self->field =
       (cubec_literal_identifier_t)alloc_clone(allocator, another->field);
   return;
 
 cleanup:
   allocator_free(allocator, &self->field);
-  allocator_free(allocator, &self->host);
+  if (self->host) allocator_free(allocator, &self->host);
 }
 
 static void _cubec_expression_namespace_access_move(
     cubec_expression_namespace_access_t self, allocator_t allocator,
     cubec_expression_namespace_access_t another) {
   g_cubec_expression_class.move(&self->super, allocator, &another->super);
-  self->host = alloc_move(allocator, another->host);
+  self->host = another->host ? alloc_move(allocator, another->host) : NULL;
   self->field =
       (cubec_literal_identifier_t)alloc_move(allocator, another->field);
   return;
 
 cleanup:
   allocator_free(allocator, &self->field);
-  allocator_free(allocator, &self->host);
+  if (self->host) allocator_free(allocator, &self->host);
 }
 
 class_t g_cubec_expression_namespace_access_class = {
@@ -131,7 +131,8 @@ node_t create_expression_namespace_access(vm_t vm, location_t loc,
 void emit_expression_namespace_access(emit_context_t ctx, node_t node) {
   cubec_expression_namespace_access_t access = (cubec_expression_namespace_access_t)node;
   recover_comments_to(ctx, node->location.begin.offset);
-  emit_expression(ctx, access->host);
+  if (access->host)
+    emit_expression(ctx, access->host);
   emit_symbol(ctx, "::");
   emit_expression(ctx, (node_t)access->field);
 }
