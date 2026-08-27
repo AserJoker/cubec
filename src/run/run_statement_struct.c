@@ -342,6 +342,12 @@ value_t run_statement_struct(vm_t vm, node_t node, bool shadow) {
   value_t type_val = vm_create_struct_type_value(vm, name, false,
                           vm_get_current_module_id(vm));
 
+  /* Register self-reference BEFORE evaluating members so that method param
+   * types like `self: *Tracker` can resolve the struct name.  This mirrors
+   * the generic-struct self-reference (lines 324-331).  If member evaluation
+   * fails we pop scopes back to scope_before, which removes the binding. */
+  _bind_name(vm, type_val, name);
+
   /* add members (fields, methods, props) */
   value_t members_result = _add_struct_members(vm, type_val, stmt->members);
   if (value_is_abnormal(members_result)) {
@@ -366,9 +372,6 @@ value_t run_statement_struct(vm_t vm, node_t node, bool shadow) {
                                            "struct", name);
   if (value_is_abnormal(impl_result))
     return impl_result;
-
-  /* bind the name in current scope */
-  _bind_name(vm, type_val, name);
 
   return create_void_value(vm);
 }

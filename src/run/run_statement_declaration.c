@@ -7,11 +7,13 @@
 #include "engine/type.h"
 #include "engine/scope.h"
 #include "engine/name.h"
+#include "engine/defer.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "core/string.h"
+#include "core/vec.h"
 
 /* ---- helper: bind a name to an already-registered value ---- */
 
@@ -204,7 +206,34 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
   /* result is already in scope->values, bind the name */
   _bind_name(vm, result, name);
 
-  /* TODO: using — register defer for __dispose__ at scope exit */
+  /* using: register a defer that calls __dispose__ on a clone at scope exit.
+   * By-value capture (same as defer |name|): the clone is owned by the
+   * defer's closure_scope; target is a borrowed pointer into it. */
+  if (stmt->is_using && !shadow) {
+    scope_t closure = scope_create(vm_get_allocator(vm), SCOPE_DEFER, NULL, NULL);
+    scope_t prev = vm_set_scope(vm, closure);
+    value_t clone = value_clone(vm, result);
+    vm_set_scope(vm, prev);
+
+    if (value_is_interrupt(clone)) {
+      scope_dispose(closure);
+      return clone;
+    }
+    if (value_is_abnormal(clone)) {
+      scope_dispose(closure);
+      return clone;
+    }
+
+    defer_init_t dinit = {
+        .func = NULL,
+        .closure_scope = closure,
+        .root_scope = vm_get_root_scope(vm),
+        .target = clone,
+    };
+    defer_t d =
+        (defer_t)allocator_create(vm_get_allocator(vm), &g_defer_class, &dinit);
+    vec_push(vm_get_current_scope(vm)->defers, d);
+  }
 
   return create_void_value(vm);
 }

@@ -384,3 +384,188 @@ TEST_F(it_defer, defer_captures_multiple_variables) {
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
   EXPECT_EQ(_get_int("result"), 30);
 }
+
+/* ================================================================
+ * using statement tests
+ * ================================================================ */
+
+/* ==== using creates a defer (basic plumbing) ==== */
+
+TEST_F(it_defer, using_creates_defer_with_target) {
+  /* Verify that using creates a defer_t with the target field set.
+   * We can't easily test __dispose__ with struct methods (self-referential
+   * type annotations not yet supported), so test the mechanism directly. */
+  int32_t val = 42;
+  value_t i32_val = vm_create_value(vm, _i32(), &val, "tmp");
+
+  /* Create a defer_t with target = cloned value (same pattern as using) */
+  scope_t closure = scope_create(vm_get_allocator(vm), SCOPE_DEFER, NULL, NULL);
+  scope_t prev = vm_set_scope(vm, closure);
+  value_t clone = value_clone(vm, i32_val);
+  vm_set_scope(vm, prev);
+
+  ASSERT_FALSE(value_is_abnormal(clone));
+
+  defer_init_t dinit = {
+      .func = NULL,
+      .closure_scope = closure,
+      .root_scope = vm_get_root_scope(vm),
+      .target = clone,
+  };
+  defer_t d =
+      (defer_t)allocator_create(vm_get_allocator(vm), &g_defer_class, &dinit);
+
+  /* Verify the defer_t has target set */
+  EXPECT_EQ(d->target, clone);
+  EXPECT_EQ(d->func, nullptr);
+
+  /* Pop the scope — this triggers vm_run_defers, which dispatches
+   * to the target branch and calls value_member_call. i32 doesn't
+   * support member_call, so the defer returns an exception, but
+   * vm_exec_defer only stops on interrupts (exceptions are swallowed). */
+  vec_push(vm_get_current_scope(vm)->defers, d);
+  vm_pop_scope(vm);
+
+  /* If we reach here without crashing, the using defer dispatch works */
+  SUCCEED();
+}
+
+/* ==== using with i32 (no __dispose__) — defer exception is swallowed ==== */
+
+TEST_F(it_defer, using_without_dispose_swallows_exception) {
+  /* using x = 0; creates a defer. At scope exit, value_member_call on i32
+   * returns an exception ("type 'i32' does not support member call"), but
+   * vm_exec_defer only checks for interrupts, not exceptions.
+   * The block itself returns void (the using statement succeeded). */
+  int32_t x_val = 0;
+  (void)vm_create_value(vm, _i32(), &x_val, "x");
+
+  value_t v = _run_source("{ using x = 0; }");
+  /* The block returns void — the defer's exception is swallowed */
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}
+
+/* ==== using shadow mode does not register defer ==== */
+
+TEST_F(it_defer, using_shadow_no_defer) {
+  int32_t x_val = 0;
+  (void)vm_create_value(vm, _i32(), &x_val, "x");
+
+  /* Shadow mode: using behaves like var, no defer registered */
+  value_t v = _run_source("{ using x = 0; }", true);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  /* x should be 0 (shadow mode — no defer fires) */
+  EXPECT_EQ(_get_int("x"), 0);
+}
+
+/* ==== using in block scope ==== */
+
+TEST_F(it_defer, using_in_block_scope) {
+  /* using inside a block scope — the defer should fire when the block exits */
+  int32_t x_val = 0;
+  (void)vm_create_value(vm, _i32(), &x_val, "x");
+
+  value_t v = _run_source("{ using x = 0; }");
+  /* Block returns void, defer fires at block exit (exception swallowed for i32) */
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}
+
+/* ==== using in function with return ==== */
+
+TEST_F(it_defer, using_in_function_return) {
+  /* using inside a function — the defer should fire when the function returns.
+   * The defer's exception (i32 has no __dispose__) is swallowed. */
+  value_t v = _run_source(
+      "func foo(): void { using x = 0; return; }"
+      "foo();");
+  _clear_diagnostics();
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}
+
+/* ==== using with defer — both fire in LIFO ==== */
+
+TEST_F(it_defer, using_and_defer_both_fire) {
+  /* using creates a defer; an explicit defer also exists.
+   * Both should fire in LIFO order (explicit defer registered after using,
+   * so explicit defer runs first). */
+  int32_t counter_val = 0;
+  (void)vm_create_value(vm, _i32(), &counter_val, "counter");
+
+  value_t v = _run_source(
+      "{ using x = 0; defer { counter = 42; }; }");
+  _clear_diagnostics();
+  /* The explicit defer sets counter = 42, then the using defer fires
+   * (exception swallowed for i32). Counter should be 42. */
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  EXPECT_EQ(_get_int("counter"), 42);
+}
+
+/* ==== using clone is independent from original ==== */
+
+TEST_F(it_defer, using_clone_is_independent) {
+  /* using captures the value by clone into the defer's closure_scope.
+   * The defer |x| also captures x by clone (the block-scope x created by using).
+   * After x is reassigned to 99, the defer's captured clone still has 5. */
+  int32_t captured_val = 0;
+  (void)vm_create_value(vm, _i32(), &captured_val, "captured");
+
+  /* using x = 5 creates a new binding x=5 in the block scope.
+   * defer |x| captures a clone of that x (=5) into its closure.
+   * Then x = 99 reassigns the block-scope x.
+   * At scope exit, defer sets captured = 5 (from its clone). */
+  value_t v = _run_source(
+      "{ using x = 5; defer |x| { captured = x; }; x = 99; }");
+  _clear_diagnostics();
+  EXPECT_EQ(_get_int("captured"), 5);
+}
+
+/* ==== using with struct __dispose__ ==== */
+
+TEST_F(it_defer, using_struct_dispose_called) {
+  /* struct with only methods (no fields) + empty initialization.
+   * Empty struct has size 1 (like C). __dispose__ called on scope exit. */
+  int32_t counter_val = 0;
+  (void)vm_create_value(vm, _i32(), &counter_val, "counter");
+
+  value_t v = _run_source(
+      "struct Tracker { "
+      "  func __dispose__(self: *Tracker): void { counter = counter + 1; }; "
+      "}; "
+      "{ using t = .Tracker{}; }");
+  _clear_diagnostics();
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  EXPECT_EQ(_get_int("counter"), 1);
+}
+
+/* ==== using struct __dispose__ in function ==== */
+
+TEST_F(it_defer, using_struct_dispose_in_function) {
+  int32_t counter_val = 0;
+  (void)vm_create_value(vm, _i32(), &counter_val, "counter");
+
+  value_t v = _run_source(
+      "struct Tracker { "
+      "  func __dispose__(self: *Tracker): void { counter = counter + 1; }; "
+      "}; "
+      "func foo(): void { using t = .Tracker{}; return; }"
+      "foo();");
+  _clear_diagnostics();
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  EXPECT_EQ(_get_int("counter"), 1);
+}
+
+/* ==== multiple using structs — LIFO ==== */
+
+TEST_F(it_defer, using_struct_multiple_lifo) {
+  int32_t counter_val = 0;
+  (void)vm_create_value(vm, _i32(), &counter_val, "counter");
+
+  value_t v = _run_source(
+      "struct Tracker { "
+      "  func __dispose__(self: *Tracker): void { counter = counter + 1; }; "
+      "}; "
+      "{ using t1 = .Tracker{}; using t2 = .Tracker{}; }");
+  _clear_diagnostics();
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  EXPECT_EQ(_get_int("counter"), 2);
+}

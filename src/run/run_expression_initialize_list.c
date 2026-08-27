@@ -105,6 +105,10 @@ static value_t _build_typed_struct(vm_t vm, value_t type_val,
   if (shadow)
     return vm_create_struct_shadow(vm, type_val, true);
 
+  /* empty struct (no fields): create directly with NULL field values */
+  if (field_count == 0)
+    return vm_create_struct_value(vm, type_val, NULL);
+
   /* evaluate field items, then reorder into declaration order */
   allocator_t alloc = vm_get_allocator(vm);
   value_t *ordered = (value_t *)allocator_alloc(alloc, field_count * sizeof(value_t));
@@ -486,7 +490,7 @@ value_t run_expression_initialize_list(vm_t vm, node_t node, bool shadow) {
 
     switch (kind) {
     case TYPE_KIND_STRUCT:
-      if (!init_list->is_field)
+      if (item_count > 0 && !init_list->is_field)
         return create_exception_value(vm,
                                       "struct requires named fields, got positional values");
       return _build_typed_struct(vm, type_val, init_list, shadow);

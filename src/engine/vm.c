@@ -714,6 +714,9 @@ static void vm_exec_defer(vm_t self, defer_t d) {
   if (d->func) {
     /* Builtin defer: call the C callback */
     result = d->func(self, NULL, 0, NULL);
+  } else if (d->target) {
+    /* Using defer: call __dispose__ on the cloned value */
+    result = value_member_call(self, d->target, "__dispose__", 0, NULL);
   } else {
     /* AST defer: delegate to ast_defer_exec */
     result = ast_defer_exec(self, (ast_defer_t)d);

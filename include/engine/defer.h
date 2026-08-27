@@ -29,9 +29,10 @@ struct _scope_t;
  * in vm->cfuncs (defer is not a callable value).
  */
 struct _defer_t {
-  cfunction_t func;               /* C callback (builtin defer), NULL for ast_defer */
+  cfunction_t func;               /* C callback (builtin defer), NULL for ast_defer/using */
   struct _scope_t *closure_scope;  /* owned: isolated scope for captured vars */
   struct _scope_t *root_scope;     /* borrowed: vm->root_scope at creation */
+  value_t target;                  /* for using defers: borrowed ref to cloned value in closure_scope */
 };
 typedef struct _defer_t *defer_t;
 
@@ -43,6 +44,7 @@ typedef struct defer_init_t {
   cfunction_t func;
   struct _scope_t *closure_scope; /* nullable, owned (transferred to defer_t) */
   struct _scope_t *root_scope;    /* borrowed: vm->root_scope at creation */
+  value_t target;                 /* for using defers: borrowed ref to cloned value */
 } defer_init_t;
 
 #ifdef __cplusplus

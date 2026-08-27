@@ -8,6 +8,7 @@ static void _defer_init(void *self, allocator_t allocator, void *arg) {
   d->func = init ? init->func : NULL;
   d->closure_scope = init ? init->closure_scope : NULL;
   d->root_scope = init ? init->root_scope : NULL;
+  d->target = init ? init->target : NULL;
 }
 
 static void _defer_dispose(void *self, allocator_t allocator) {
