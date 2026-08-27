@@ -171,12 +171,24 @@ value_t run_statement_foreach(vm_t vm, node_t node, bool shadow) {
     _bind_or_update_name(vm, val_field, var_name, stmt->is_var_decl);
 
     /* Execute body */
+    scope_t scope_before_body = vm_get_current_scope(vm);
     value_t body_val = run_statement(vm, stmt->body, shadow);
     if (value_is_interrupt(body_val)) {
       interrupt_kind_t kind = interrupt_get_kind(body_val);
       if (kind == INTERRUPT_KIND_RETURN) return body_val;
-      if (kind == INTERRUPT_KIND_BREAK) break;
-      if (kind == INTERRUPT_KIND_CONTINUE) continue;
+      /* break/continue: unwind leftover scopes (run_statement_block does not
+       * pop on interrupt). vm_pop_scope executes defers registered in those
+       * scopes before disposing them. */
+      if (kind == INTERRUPT_KIND_BREAK) {
+        while (vm_get_current_scope(vm) != scope_before_body)
+          vm_pop_scope(vm);
+        break;
+      }
+      if (kind == INTERRUPT_KIND_CONTINUE) {
+        while (vm_get_current_scope(vm) != scope_before_body)
+          vm_pop_scope(vm);
+        continue;
+      }
       return body_val;
     }
     if (value_is_abnormal(body_val)) return body_val;

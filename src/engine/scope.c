@@ -17,7 +17,7 @@ static void _scope_init(void *self, allocator_t allocator, void *arg) {
   vec_init_t val_init = {.auto_dispose = true};
   scope->values = (vec_t)allocator_create(allocator, &g_vec_class, &val_init);
 
-  vec_init_t defer_init = {.auto_dispose = false};
+  vec_init_t defer_init = {.auto_dispose = true};
   scope->defers = (vec_t)allocator_create(allocator, &g_vec_class, &defer_init);
 
   scope->owner = NULL;

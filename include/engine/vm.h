@@ -169,8 +169,15 @@ struct _vec_t *vm_get_types(vm_t self);
  *  Sets root_scope and current_scope to the new child scope. */
 void vm_push_scope(vm_t self, scope_t scope);
 
-/** @brief Pop back to current_scope->parent. */
+/** @brief Pop back to current_scope->parent.
+ *  Executes any defers registered in the popped scope (LIFO order)
+ *  before disposing it. */
 void vm_pop_scope(vm_t self);
+
+/** @brief Execute all defers registered in a scope (LIFO order).
+ *  Called internally by vm_pop_scope before scope_dispose.
+ *  Can also be called directly for explicit defer execution. */
+void vm_run_defers(vm_t self, scope_t scope);
 
 /** @brief Set current_scope, return previous current_scope.
  *  For function call / closure: switch to an independent scope tree. */

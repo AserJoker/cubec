@@ -114,6 +114,7 @@ value_t run_statement_do_while(vm_t vm, node_t node, bool shadow);
 value_t run_statement_foreach(vm_t vm, node_t node, bool shadow);
 value_t run_statement_break(vm_t vm, node_t node, bool shadow);
 value_t run_statement_continue(vm_t vm, node_t node, bool shadow);
+value_t run_statement_defer(vm_t vm, node_t node, bool shadow);
 value_t run_statement_enum(vm_t vm, node_t node, bool shadow);
 value_t run_declaration_enum(vm_t vm, node_t node, bool shadow);
 

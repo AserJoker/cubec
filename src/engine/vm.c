@@ -4,8 +4,11 @@
 #include "cubec/program.h"
 #include "cubec/token.h"
 #include "engine/array_type.h"
+#include "engine/ast_defer.h"
 #include "engine/bool_type.h"
 #include "engine/callable_type.h"
+#include "engine/defer.h"
+#include "engine/diagnostic.h"
 #include "engine/exception_type.h"
 #include "engine/interrupt_type.h"
 #include "engine/float_type.h"
@@ -689,7 +692,55 @@ void vm_pop_scope(vm_t self) {
     return;
   scope_t popped = self->current_scope;
   self->current_scope = popped->parent;
+
+  /* Execute defers in LIFO order BEFORE disposing the scope.
+   * Empty defers vec (most temporary scopes) is a no-op — just a
+   * vec_get_size check. */
+  vm_run_defers(self, popped);
+
   scope_dispose(popped);
+}
+
+/* ---- Defer execution ---- */
+
+static void vm_exec_defer(vm_t self, defer_t d) {
+  if (!d)
+    return;
+
+  scope_t saved_root = vm_set_root_scope(self, d->root_scope);
+  scope_t caller_scope = vm_get_current_scope(self);
+  value_t result = NULL;
+
+  if (d->func) {
+    /* Builtin defer: call the C callback */
+    result = d->func(self, NULL, 0, NULL);
+  } else {
+    /* AST defer: delegate to ast_defer_exec */
+    result = ast_defer_exec(self, (ast_defer_t)d);
+  }
+
+  /* defer body must not contain return/break/continue.
+   * Shadow mode already prevents this at compile time (run_statement_defer
+   * reports diagnostic). Runtime occurrence should never happen, but
+   * defensively report a diagnostic and stop the defer chain. */
+  if (result && value_is_interrupt(result)) {
+    diagnostic_list_push(vm_get_diagnostics(self), DIAGNOSTIC_ERROR,
+                         (location_t){0},
+                         "defer body must not contain return/break/continue");
+  }
+
+  vm_set_scope(self, caller_scope);
+  vm_set_root_scope(self, saved_root);
+}
+
+void vm_run_defers(vm_t self, scope_t scope) {
+  if (!self || !scope)
+    return;
+  size_t count = vec_get_size(scope->defers);
+  for (size_t i = count; i > 0; i--) {
+    defer_t d = (defer_t)vec_get(scope->defers, i - 1);
+    vm_exec_defer(self, d);
+  }
 }
 
 scope_t vm_set_scope(vm_t self, scope_t scope) {

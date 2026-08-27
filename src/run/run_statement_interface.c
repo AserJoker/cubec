@@ -137,6 +137,10 @@ static value_t _add_interface_members(vm_t vm, value_t type_val, vec_t members) 
   for (size_t i = 0; i < mc; i++) {
     node_t member = (node_t)vec_get(members, i);
 
+    if (member->kind == CUBEC_NODE_STATEMENT_DEFER) {
+      return create_exception_value(vm, "defer is not allowed in type scope");
+    }
+
     if (member->kind == CUBEC_NODE_INTERFACE_METHOD) {
       cubec_interface_method_t method = (cubec_interface_method_t)member;
       const char *method_name = _get_name(method->name);
@@ -209,7 +213,6 @@ static value_t _add_interface_members(vm_t vm, value_t type_val, vec_t members) 
 /* ---- main entry ---- */
 
 value_t run_statement_interface(vm_t vm, node_t node, bool shadow) {
-  (void)shadow; /* interface type expressions evaluate identically in both modes */
   cubec_statement_interface_t stmt = (cubec_statement_interface_t)node;
   const char *name = _get_name(stmt->name);
   scope_t scope_before = vm_get_current_scope(vm);
@@ -268,8 +271,17 @@ value_t run_statement_interface(vm_t vm, node_t node, bool shadow) {
 
   /* add method signatures */
   value_t members_result = _add_interface_members(vm, type_val, stmt->members);
-  if (value_is_abnormal(members_result))
+  if (value_is_abnormal(members_result)) {
+    if (shadow) {
+      while (vm_get_current_scope(vm) != scope_before)
+        vm_pop_scope(vm);
+      diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                           node->location,
+                           "interface member evaluation error");
+      return create_void_value(vm);
+    }
     return members_result;
+  }
 
   /* seal */
   value_t seal_result = vm_interface_seal(vm, type_val);
